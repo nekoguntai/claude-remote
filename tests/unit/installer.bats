@@ -159,22 +159,22 @@ arch_to_ttyd_arch() {
 # =============================================================================
 
 @test "checksum constants: x86_64 checksum is valid format" {
-    local checksum="a68fca635dbc2b8d2d7c6a4442f0d59246c909c07051aba02834d84e81396fe9"
+    local checksum="8a217c968aba172e0dbf3f34447218dc015bc4d5e59bf51db2f2cd12b7be4f55"
 
     [ ${#checksum} -eq 64 ]
     [[ "$checksum" =~ ^[a-f0-9]{64}$ ]]
 }
 
 @test "checksum constants: aarch64 checksum is valid format" {
-    local checksum="7e71bae2c0b96e8d66ad4611e075c2c22561fac55ccd7df085d86f5d4bf3cb26"
+    local checksum="b38acadd89d1d396a0f5649aa52c539edbad07f4bc7348b27b4f4b7219dd4165"
 
     [ ${#checksum} -eq 64 ]
     [[ "$checksum" =~ ^[a-f0-9]{64}$ ]]
 }
 
 @test "checksum constants: checksums are different per architecture" {
-    local x86="a68fca635dbc2b8d2d7c6a4442f0d59246c909c07051aba02834d84e81396fe9"
-    local arm="7e71bae2c0b96e8d66ad4611e075c2c22561fac55ccd7df085d86f5d4bf3cb26"
+    local x86="8a217c968aba172e0dbf3f34447218dc015bc4d5e59bf51db2f2cd12b7be4f55"
+    local arm="b38acadd89d1d396a0f5649aa52c539edbad07f4bc7348b27b4f4b7219dd4165"
 
     [ "$x86" != "$arm" ]
 }

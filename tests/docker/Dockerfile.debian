@@ -1,0 +1,26 @@
+# Dockerfile for testing claude-remote installation on Debian/Ubuntu
+FROM debian:bookworm-slim
+
+# Install minimal dependencies for testing
+RUN apt-get update && apt-get install -y \
+    bash \
+    curl \
+    sudo \
+    openssl \
+    procps \
+    && rm -rf /var/lib/apt/lists/*
+
+# Create a non-root user for testing
+RUN useradd -m -s /bin/bash testuser && \
+    echo "testuser ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
+
+# Copy the project
+COPY . /home/testuser/claude-remote
+RUN chown -R testuser:testuser /home/testuser/claude-remote
+
+# Switch to test user
+USER testuser
+WORKDIR /home/testuser/claude-remote
+
+# Default command runs the installation test
+CMD ["bash", "tests/docker/test-install.sh"]

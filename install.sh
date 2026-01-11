@@ -66,11 +66,12 @@ CONFIG_DIR="${HOME}/.config/claude-remote"
 TTYD_VERSION="1.7.7"
 
 # Checksum lookup function (bash 3.2 compatible, no associative arrays)
+# Checksums verified from https://github.com/tsl0922/ttyd/releases/tag/1.7.7
 get_ttyd_checksum() {
     local arch="$1"
     case "$arch" in
-        x86_64)  echo "a68fca635dbc2b8d2d7c6a4442f0d59246c909c07051aba02834d84e81396fe9" ;;
-        aarch64) echo "7e71bae2c0b96e8d66ad4611e075c2c22561fac55ccd7df085d86f5d4bf3cb26" ;;
+        x86_64)  echo "8a217c968aba172e0dbf3f34447218dc015bc4d5e59bf51db2f2cd12b7be4f55" ;;
+        aarch64) echo "b38acadd89d1d396a0f5649aa52c539edbad07f4bc7348b27b4f4b7219dd4165" ;;
         *)       echo "" ;;  # Unknown architecture
     esac
 }
@@ -400,20 +401,27 @@ install_service_linux() {
     sed "s|%h|${HOME}|g" "${SCRIPT_DIR}/systemd/claude-maintenance.service" > "${HOME}/.config/systemd/user/claude-maintenance.service"
     cp "${SCRIPT_DIR}/systemd/claude-maintenance.timer" "${HOME}/.config/systemd/user/claude-maintenance.timer"
 
-    # Reload systemd
-    systemctl --user daemon-reload
+    # Check if systemctl is available (not in containers)
+    if command -v systemctl &>/dev/null; then
+        # Reload systemd
+        systemctl --user daemon-reload
 
-    # Enable and start web service
-    systemctl --user enable claude-web.service
-    systemctl --user start claude-web.service
+        # Enable and start web service
+        systemctl --user enable claude-web.service
+        systemctl --user start claude-web.service
 
-    # Enable maintenance timer (runs weekly)
-    systemctl --user enable claude-maintenance.timer
-    systemctl --user start claude-maintenance.timer
+        # Enable maintenance timer (runs weekly)
+        systemctl --user enable claude-maintenance.timer
+        systemctl --user start claude-maintenance.timer
 
-    print_success "Systemd services installed and started"
-    print_info "Web service: systemctl --user {start|stop|restart|status} claude-web.service"
-    print_info "Maintenance: runs weekly (systemctl --user list-timers)"
+        print_success "Systemd services installed and started"
+        print_info "Web service: systemctl --user {start|stop|restart|status} claude-web.service"
+        print_info "Maintenance: runs weekly (systemctl --user list-timers)"
+    else
+        print_warning "systemctl not available (running in container?)"
+        print_info "Service files installed to ~/.config/systemd/user/"
+        print_info "Start manually when systemd is available"
+    fi
 }
 
 install_service_macos() {

@@ -1,0 +1,27 @@
+# Dockerfile for testing claude-remote installation on Fedora/RHEL
+FROM fedora:39
+
+# Install minimal dependencies for testing
+RUN dnf install -y \
+    bash \
+    curl \
+    sudo \
+    openssl \
+    procps-ng \
+    hostname \
+    && dnf clean all
+
+# Create a non-root user for testing
+RUN useradd -m -s /bin/bash testuser && \
+    echo "testuser ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
+
+# Copy the project
+COPY . /home/testuser/claude-remote
+RUN chown -R testuser:testuser /home/testuser/claude-remote
+
+# Switch to test user
+USER testuser
+WORKDIR /home/testuser/claude-remote
+
+# Default command runs the installation test
+CMD ["bash", "tests/docker/test-install.sh"]

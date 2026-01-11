@@ -155,6 +155,45 @@ run_syntax_check() {
     return $failed
 }
 
+# Run Docker integration tests
+run_docker_tests() {
+    print_header "Running Docker Integration Tests"
+
+    if ! command -v docker &>/dev/null; then
+        print_error "Docker is not installed"
+        return 1
+    fi
+
+    local compose_file="tests/docker/docker-compose.test.yml"
+
+    if [[ ! -f "$compose_file" ]]; then
+        print_error "Docker compose file not found: $compose_file"
+        return 1
+    fi
+
+    echo "Building test containers..."
+    docker-compose -f "$compose_file" build
+
+    echo ""
+    echo "Running Debian tests..."
+    if docker-compose -f "$compose_file" run --rm test-debian; then
+        print_success "Debian tests passed"
+    else
+        print_error "Debian tests failed"
+    fi
+
+    echo ""
+    echo "Running Fedora tests..."
+    if docker-compose -f "$compose_file" run --rm test-fedora; then
+        print_success "Fedora tests passed"
+    else
+        print_error "Fedora tests failed"
+    fi
+
+    # Cleanup
+    docker-compose -f "$compose_file" down --rmi local 2>/dev/null || true
+}
+
 # Run bats tests
 run_bats_tests() {
     local suite="$1"
@@ -212,6 +251,9 @@ main() {
         integration)
             run_bats_tests integration
             ;;
+        docker)
+            run_docker_tests
+            ;;
         all)
             run_syntax_check
             echo ""
@@ -227,6 +269,7 @@ main() {
             echo "  unit         Run unit tests only"
             echo "  smoke        Run smoke tests only"
             echo "  integration  Run integration tests only"
+            echo "  docker       Run Docker integration tests"
             echo "  lint         Run ShellCheck only"
             echo "  syntax       Run bash syntax check only"
             echo "  --install    Install bats-core"
