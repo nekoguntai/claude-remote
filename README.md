@@ -8,7 +8,7 @@ Persistent terminal sessions for mobile productivity. Run long processes, discon
 - **Mosh + tmux**: Native terminal experience with roaming support
 - **Web Fallback**: Access via browser when native clients aren't available
 - **Cross-Platform**: Works from iOS, Android, Windows, Mac, Linux
-- **Secure by Default**: Password authentication, localhost binding, connection limits
+- **Secure by Default**: Tailnet-only access, password auth, localhost binding, 2FA support
 
 ## Architecture
 
@@ -32,8 +32,8 @@ Persistent terminal sessions for mobile productivity. Run long processes, discon
     │         ▲                 ▲             │
     │    mosh-server     ttyd (127.0.0.1)     │
     │    (UDP 60000+)          │              │
-    │                    Tailscale Funnel     │
-    │                    (HTTPS + auth)       │
+    │                    Tailscale Serve      │
+    │                  (Tailnet-only + auth)  │
     └─────────────────────────────────────────┘
 ```
 
@@ -55,7 +55,7 @@ The installer will:
 2. Generate a secure random password for web access
 3. Configure tmux with security-optimized settings
 4. Set up the web terminal service (localhost only)
-5. Configure Tailscale Funnel (if available)
+5. Configure Tailscale Serve for Tailnet-only access (if available)
 
 **Important**: Save the web terminal password shown at the end of installation!
 
@@ -76,10 +76,11 @@ mosh user@yourserver -- claude-session
 ssh user@yourserver -t 'claude-session'
 ```
 
-**Connect via web browser:**
-1. Open your Tailscale Funnel URL
-2. Login with username `claude` and the password from installation
-3. You'll attach to your tmux session
+**Connect via web browser (requires Tailscale on client device):**
+1. Install Tailscale on your device and join your Tailnet
+2. Open `https://your-hostname:7681` (shown during installation)
+3. Login with username `claude` and the password from installation
+4. You'll attach to your tmux session
 
 **Check status:**
 ```bash
@@ -97,27 +98,38 @@ cat ~/.config/claude-remote/web-credentials
 
 | Layer | Protection |
 |-------|------------|
+| **Network Access** | Tailnet-only (not publicly accessible) |
+| **Authentication** | Tailscale account + password (effective 2FA) |
 | **Web Terminal** | Password authentication required |
-| **Network** | ttyd binds to 127.0.0.1 only (not exposed on network) |
+| **Network Binding** | ttyd binds to 127.0.0.1 only |
 | **Connections** | Max 2 concurrent web clients |
-| **Transport** | HTTPS via Tailscale Funnel |
+| **Transport** | HTTPS via Tailscale |
 | **Idle Sessions** | Auto-lock after 15 minutes |
 | **Binary Downloads** | SHA256 checksum verification |
 | **Credentials** | Stored with 600 permissions |
 
+### Why Tailnet-Only is Secure
+
+Unlike Tailscale Funnel (which exposes services publicly), Tailscale Serve restricts access to devices on your Tailnet:
+
+1. **Attacker must compromise your Tailscale account** to reach the URL
+2. **Your Tailscale account can have 2FA** enabled for additional protection
+3. **No public URL to discover** - invisible to the internet
+4. **Password is a second factor** - even if someone joins your Tailnet, they need the password
+
 ### What This Does NOT Protect Against
 
 - **SSH/Mosh access**: Uses your existing SSH authentication
-- **Tailscale Funnel URL discovery**: If someone finds your Funnel URL, they can attempt authentication
+- **Tailnet member with password**: If someone has both, they can access
 - **Shared sessions**: Multiple web clients see the same tmux session
 - **Server compromise**: If your server is compromised, sessions are exposed
 
 ### Security Recommendations
 
-1. **Use a strong SSH key** for mosh/SSH access
-2. **Don't share your Funnel URL** publicly
+1. **Enable 2FA on your Tailscale account** (strongly recommended)
+2. **Use a strong SSH key** for mosh/SSH access
 3. **Use `Ctrl+a C-k`** to clear scrollback after entering sensitive data
-4. **Disable Funnel** when not needed: `tailscale funnel 7681 off`
+4. **Audit your Tailnet members** regularly
 
 ## Client Apps by Platform
 

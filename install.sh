@@ -299,7 +299,7 @@ setup_tailscale() {
             echo "        sh /tmp/tailscale-install.sh"
         fi
         print_info "After installing, run: sudo tailscale up"
-        print_info "Then re-run this installer to configure Funnel"
+        print_info "Then re-run this installer to configure web terminal access"
         return
     fi
 
@@ -310,25 +310,21 @@ setup_tailscale() {
         return
     fi
 
-    print_info "Enabling Tailscale Funnel for port 7681..."
-    print_info "This may require authentication in your browser"
+    print_info "Configuring Tailscale Serve (Tailnet-only access)..."
 
-    # Enable HTTPS first (required for Funnel)
-    tailscale serve https:7681 / http://127.0.0.1:7681 2>/dev/null || true
+    # Enable HTTPS serve for Tailnet-only access (no Funnel = not public)
+    if tailscale serve https:7681 / http://127.0.0.1:7681 2>/dev/null; then
+        print_success "Tailscale Serve enabled (Tailnet-only)"
 
-    # Enable Funnel
-    if tailscale funnel 7681 on 2>/dev/null; then
-        print_success "Tailscale Funnel enabled"
-
-        # Get the Funnel URL
-        FUNNEL_URL=$(tailscale funnel status 2>/dev/null | grep -oE 'https://[^ ]+' | head -1)
-        if [[ -n "$FUNNEL_URL" ]]; then
-            print_success "Web terminal available at: ${BOLD}${FUNNEL_URL}${NC}"
+        # Get the serve URL
+        TS_HOSTNAME=$(tailscale status --json 2>/dev/null | grep -o '"DNSName":"[^"]*"' | head -1 | cut -d'"' -f4 | sed 's/\.$//')
+        if [[ -n "$TS_HOSTNAME" ]]; then
+            print_success "Web terminal available at: ${BOLD}https://${TS_HOSTNAME}:7681${NC}"
+            print_info "Access requires Tailscale - install on your devices"
         fi
     else
-        print_warning "Could not enable Funnel automatically"
-        print_info "You may need to enable it manually in the Tailscale admin console"
-        print_info "Then run: tailscale funnel 7681 on"
+        print_warning "Could not configure Tailscale Serve automatically"
+        print_info "Run manually: tailscale serve https:7681 / http://127.0.0.1:7681"
     fi
 }
 
@@ -360,11 +356,11 @@ print_completion() {
     echo -e "     ${YELLOW}ssh $(whoami)@$(hostname) -t 'claude-session'${NC}"
     echo ""
 
-    if check_command tailscale; then
-        FUNNEL_URL=$(tailscale funnel status 2>/dev/null | grep -oE 'https://[^ ]+' | head -1)
-        if [[ -n "$FUNNEL_URL" ]]; then
-            echo -e "  ${CYAN}4. Connect via web browser:${NC}"
-            echo -e "     ${YELLOW}${FUNNEL_URL}${NC}"
+    if check_command tailscale && tailscale status &>/dev/null; then
+        TS_HOSTNAME=$(tailscale status --json 2>/dev/null | grep -o '"DNSName":"[^"]*"' | head -1 | cut -d'"' -f4 | sed 's/\.$//')
+        if [[ -n "$TS_HOSTNAME" ]]; then
+            echo -e "  ${CYAN}4. Connect via web browser (requires Tailscale):${NC}"
+            echo -e "     ${YELLOW}https://${TS_HOSTNAME}:7681${NC}"
             echo -e "     (Login with credentials above)"
             echo ""
         fi
@@ -374,10 +370,12 @@ print_completion() {
     echo -e "     ${YELLOW}claude-status${NC}"
     echo ""
     echo -e "${BOLD}Security Notes:${NC}"
-    echo "  • Web terminal requires password authentication"
+    echo "  • Web terminal requires Tailscale + password authentication"
+    echo "  • Only accessible from devices on your Tailnet (not public)"
     echo "  • ttyd binds to localhost only (127.0.0.1)"
-    echo "  • Tailscale Funnel provides HTTPS encryption"
+    echo "  • HTTPS encryption via Tailscale"
     echo "  • Max 2 concurrent web connections allowed"
+    echo "  • Enable 2FA on your Tailscale account for extra security"
     echo ""
     echo -e "${BOLD}Usage Tips:${NC}"
     echo "  • Start a long-running process and disconnect - it keeps running!"

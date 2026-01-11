@@ -20,7 +20,7 @@ echo -e "${BOLD}${BLUE}═══════════════════
 echo ""
 
 # Check tmux sessions
-echo -e "${BOLD}${CYAN}📺 tmux Sessions${NC}"
+echo -e "${BOLD}${CYAN}tmux Sessions${NC}"
 echo -e "${CYAN}─────────────────────────────────────────────────────────────${NC}"
 if tmux list-sessions 2>/dev/null; then
     echo ""
@@ -30,7 +30,7 @@ else
 fi
 
 # Check mosh server
-echo -e "${BOLD}${CYAN}🔌 Mosh Server${NC}"
+echo -e "${BOLD}${CYAN}Mosh Server${NC}"
 echo -e "${CYAN}─────────────────────────────────────────────────────────────${NC}"
 if command -v mosh-server &> /dev/null; then
     echo -e "  Status: ${GREEN}Installed${NC}"
@@ -45,9 +45,9 @@ fi
 echo ""
 
 # Check ttyd / web terminal
-echo -e "${BOLD}${CYAN}🌐 Web Terminal (ttyd)${NC}"
+echo -e "${BOLD}${CYAN}Web Terminal (ttyd)${NC}"
 echo -e "${CYAN}─────────────────────────────────────────────────────────────${NC}"
-if command -v ttyd &> /dev/null; then
+if command -v ttyd &> /dev/null || [[ -x "${HOME}/.local/bin/ttyd" ]]; then
     echo -e "  Status: ${GREEN}Installed${NC}"
 
     # Check if service is running
@@ -66,35 +66,43 @@ if command -v ttyd &> /dev/null; then
             echo -e "  Service: ${YELLOW}Not running${NC}"
         fi
     fi
+
+    # Check credentials
+    CRED_FILE="${HOME}/.config/claude-remote/web-credentials"
+    if [[ -f "$CRED_FILE" ]]; then
+        echo -e "  Auth: ${GREEN}Configured${NC} (user: claude)"
+    else
+        echo -e "  Auth: ${RED}Not configured${NC}"
+    fi
 else
     echo -e "  Status: ${RED}Not installed${NC}"
 fi
 echo ""
 
 # Check Tailscale
-echo -e "${BOLD}${CYAN}🔒 Tailscale${NC}"
+echo -e "${BOLD}${CYAN}Tailscale${NC}"
 echo -e "${CYAN}─────────────────────────────────────────────────────────────${NC}"
 if command -v tailscale &> /dev/null; then
     echo -e "  Status: ${GREEN}Installed${NC}"
 
     # Get Tailscale status
-    TS_STATUS=$(tailscale status --json 2>/dev/null)
-    if [ $? -eq 0 ]; then
+    if tailscale status &>/dev/null; then
+        TS_STATUS=$(tailscale status --json 2>/dev/null)
         TS_IP=$(echo "$TS_STATUS" | grep -o '"TailscaleIPs":\[[^]]*\]' | grep -oE '[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+' | head -1)
-        TS_NAME=$(echo "$TS_STATUS" | grep -o '"Self":{"[^}]*' | grep -o '"HostName":"[^"]*"' | cut -d'"' -f4)
+        TS_HOSTNAME=$(echo "$TS_STATUS" | grep -o '"DNSName":"[^"]*"' | head -1 | cut -d'"' -f4 | sed 's/\.$//')
 
         if [ -n "$TS_IP" ]; then
             echo -e "  Connected: ${GREEN}Yes${NC}"
             echo -e "  IP: ${TS_IP}"
-            echo -e "  Hostname: ${TS_NAME}"
+            echo -e "  Hostname: ${TS_HOSTNAME}"
 
-            # Check Funnel status
-            if tailscale funnel status 2>/dev/null | grep -q "7681"; then
-                FUNNEL_URL=$(tailscale funnel status 2>/dev/null | grep -oE 'https://[^ ]+' | head -1)
-                echo -e "  Funnel: ${GREEN}Active${NC}"
-                echo -e "  Web URL: ${BOLD}${FUNNEL_URL}${NC}"
+            # Check Serve status (not Funnel)
+            SERVE_STATUS=$(tailscale serve status 2>/dev/null || echo "")
+            if echo "$SERVE_STATUS" | grep -q "7681"; then
+                echo -e "  Serve: ${GREEN}Active${NC} (Tailnet-only)"
+                echo -e "  Web URL: ${BOLD}https://${TS_HOSTNAME}:7681${NC}"
             else
-                echo -e "  Funnel: ${YELLOW}Not configured${NC}"
+                echo -e "  Serve: ${YELLOW}Not configured${NC}"
             fi
         else
             echo -e "  Connected: ${RED}No${NC}"
@@ -108,7 +116,7 @@ fi
 echo ""
 
 # Connection instructions
-echo -e "${BOLD}${CYAN}📖 Connection Instructions${NC}"
+echo -e "${BOLD}${CYAN}Connection Instructions${NC}"
 echo -e "${CYAN}─────────────────────────────────────────────────────────────${NC}"
 HOSTNAME=$(hostname)
 USER=$(whoami)
@@ -120,11 +128,13 @@ echo -e "  ${BOLD}SSH:${NC}"
 echo -e "    ssh ${USER}@${HOSTNAME} -t 'claude-session'"
 echo ""
 
-if command -v tailscale &> /dev/null; then
-    FUNNEL_URL=$(tailscale funnel status 2>/dev/null | grep -oE 'https://[^ ]+' | head -1)
-    if [ -n "$FUNNEL_URL" ]; then
-        echo -e "  ${BOLD}Web Browser:${NC}"
-        echo -e "    ${FUNNEL_URL}"
+if command -v tailscale &> /dev/null && tailscale status &>/dev/null; then
+    TS_HOSTNAME=$(tailscale status --json 2>/dev/null | grep -o '"DNSName":"[^"]*"' | head -1 | cut -d'"' -f4 | sed 's/\.$//')
+    if [ -n "$TS_HOSTNAME" ]; then
+        echo -e "  ${BOLD}Web Browser (requires Tailscale on client):${NC}"
+        echo -e "    https://${TS_HOSTNAME}:7681"
+        echo -e "    Username: claude"
+        echo -e "    Password: cat ~/.config/claude-remote/web-credentials"
         echo ""
     fi
 fi
