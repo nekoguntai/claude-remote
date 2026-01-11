@@ -4,16 +4,22 @@
 # Installs mosh + tmux with web terminal fallback
 #
 # Usage:
-#   ./install.sh              # Normal installation
+#   ./install.sh              # Fresh installation
+#   ./install.sh --upgrade    # Upgrade existing installation
 #   ./install.sh --dry-run    # Show what would be done without doing it
+#   ./install.sh --version    # Show version
 #   ./install.sh --help       # Show help
 #
 
 set -e
 
+# Version
+VERSION="1.0.0"
+
 # Mode flags
 DRY_RUN=false
 VERBOSE=false
+UPGRADE_MODE=false
 
 # Parse command line arguments
 while [[ $# -gt 0 ]]; do
@@ -26,12 +32,22 @@ while [[ $# -gt 0 ]]; do
             VERBOSE=true
             shift
             ;;
+        --upgrade|-u)
+            UPGRADE_MODE=true
+            shift
+            ;;
+        --version|-V)
+            echo "claude-remote version $VERSION"
+            exit 0
+            ;;
         --help|-h)
             echo "Usage: $0 [OPTIONS]"
             echo ""
             echo "Options:"
+            echo "  --upgrade, -u    Upgrade existing installation"
             echo "  --dry-run, -n    Show what would be done without making changes"
             echo "  --verbose, -v    Show verbose output"
+            echo "  --version, -V    Show version information"
             echo "  --help, -h       Show this help message"
             echo ""
             echo "Environment variables:"
@@ -60,6 +76,53 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 LOCAL_BIN="${HOME}/.local/bin"
 LOCAL_SHARE="${HOME}/.local/share/claude-remote"
 CONFIG_DIR="${HOME}/.config/claude-remote"
+VERSION_FILE="${CONFIG_DIR}/version"
+
+# Get currently installed version (returns "none" if not installed)
+get_installed_version() {
+    if [[ -f "$VERSION_FILE" ]]; then
+        cat "$VERSION_FILE"
+    else
+        echo "none"
+    fi
+}
+
+# Compare versions: returns 0 if v1 > v2, 1 if v1 = v2, 2 if v1 < v2
+# Simple semver comparison (works for X.Y.Z format)
+version_compare() {
+    local v1="$1"
+    local v2="$2"
+
+    if [[ "$v1" == "$v2" ]]; then
+        return 1  # Equal
+    fi
+
+    # Split versions into arrays
+    local IFS='.'
+    # shellcheck disable=SC2206
+    local v1_parts=($v1)
+    # shellcheck disable=SC2206
+    local v2_parts=($v2)
+
+    # Compare each part
+    for i in 0 1 2; do
+        local p1="${v1_parts[$i]:-0}"
+        local p2="${v2_parts[$i]:-0}"
+        if (( p1 > p2 )); then
+            return 0  # v1 > v2
+        elif (( p1 < p2 )); then
+            return 2  # v1 < v2
+        fi
+    done
+
+    return 1  # Equal
+}
+
+# Save version to file
+save_version() {
+    mkdir -p "$CONFIG_DIR"
+    echo "$VERSION" > "$VERSION_FILE"
+}
 
 # ttyd version and checksums for verification
 # Checksums obtained from official GitHub releases
@@ -77,15 +140,52 @@ get_ttyd_checksum() {
 }
 
 print_banner() {
+    local installed_version
+    installed_version=$(get_installed_version)
+
     echo -e "${BOLD}${BLUE}"
     echo "╔═══════════════════════════════════════════════════════════╗"
     echo "║                                                           ║"
-    echo "║               Claude Remote Installer                     ║"
+    if $UPGRADE_MODE; then
+        echo "║               Claude Remote Upgrader                      ║"
+    else
+        echo "║               Claude Remote Installer                     ║"
+    fi
     echo "║                                                           ║"
     echo "║   Persistent terminal sessions for mobile productivity    ║"
     echo "║                                                           ║"
     echo "╚═══════════════════════════════════════════════════════════╝"
     echo -e "${NC}"
+
+    # Show version info
+    if $UPGRADE_MODE; then
+        if [[ "$installed_version" == "none" ]]; then
+            echo -e "${YELLOW}No existing installation found. Performing fresh install.${NC}"
+            UPGRADE_MODE=false
+        else
+            echo -e "  ${CYAN}Installed version:${NC} ${installed_version}"
+            echo -e "  ${CYAN}New version:${NC}       ${VERSION}"
+
+            # Check if upgrade is needed
+            local cmp=0
+            version_compare "$VERSION" "$installed_version" && cmp=0 || cmp=$?
+            if [[ $cmp -eq 0 ]]; then
+                echo -e "  ${GREEN}Upgrading...${NC}"
+            elif [[ $cmp -eq 1 ]]; then
+                echo -e "  ${YELLOW}Already at version ${VERSION}. Re-installing...${NC}"
+            else
+                echo -e "  ${YELLOW}Warning: Installed version is newer. Proceeding anyway...${NC}"
+            fi
+        fi
+        echo ""
+    else
+        echo -e "  ${CYAN}Version:${NC} ${VERSION}"
+        if [[ "$installed_version" != "none" ]]; then
+            echo -e "  ${YELLOW}Note: Existing installation detected (v${installed_version})${NC}"
+            echo -e "  ${YELLOW}Use --upgrade for cleaner upgrade messaging${NC}"
+        fi
+        echo ""
+    fi
 }
 
 print_step() {
@@ -577,7 +677,11 @@ main() {
     print_banner
 
     if $DRY_RUN; then
-        echo -e "${BOLD}${YELLOW}DRY RUN MODE - No changes will be made${NC}\n"
+        if $UPGRADE_MODE; then
+            echo -e "${BOLD}${YELLOW}DRY RUN MODE (UPGRADE) - No changes will be made${NC}\n"
+        else
+            echo -e "${BOLD}${YELLOW}DRY RUN MODE - No changes will be made${NC}\n"
+        fi
     fi
 
     # Detect OS
@@ -619,8 +723,17 @@ main() {
     # Setup Tailscale
     setup_tailscale
 
+    # Save version file
+    if ! $DRY_RUN; then
+        save_version
+    fi
+
     # Print completion message
     print_completion
+
+    if $UPGRADE_MODE && ! $DRY_RUN; then
+        echo -e "${GREEN}Successfully upgraded to version ${VERSION}${NC}"
+    fi
 }
 
 # Run main
