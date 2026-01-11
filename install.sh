@@ -239,6 +239,27 @@ detect_os() {
     print_info "Detected OS: $OS (package manager: $PACKAGE_MANAGER)"
 }
 
+# Ensure Homebrew is in PATH on macOS (may not be set in non-interactive shells)
+init_homebrew_path() {
+    if [[ "$OSTYPE" != "darwin"* ]]; then
+        return
+    fi
+
+    # Check if brew is already in PATH
+    if command -v brew &>/dev/null; then
+        return
+    fi
+
+    # Try Apple Silicon location first, then Intel
+    if [[ -f "/opt/homebrew/bin/brew" ]]; then
+        eval "$(/opt/homebrew/bin/brew shellenv)"
+        print_info "Added Homebrew to PATH (Apple Silicon: /opt/homebrew)"
+    elif [[ -f "/usr/local/bin/brew" ]]; then
+        eval "$(/usr/local/bin/brew shellenv)"
+        print_info "Added Homebrew to PATH (Intel: /usr/local)"
+    fi
+}
+
 check_command() {
     command -v "$1" &> /dev/null
 }
@@ -536,11 +557,48 @@ install_scripts() {
 
     print_success "Scripts installed to ${LOCAL_BIN}"
 
-    # Check if LOCAL_BIN is in PATH
+    # Check if LOCAL_BIN is in PATH and add if needed
     if [[ ":$PATH:" != *":${LOCAL_BIN}:"* ]]; then
         print_warning "${LOCAL_BIN} is not in your PATH"
-        print_info "Add this to your shell profile (.bashrc, .zshrc, etc.):"
-        echo -e "        ${YELLOW}export PATH=\"\${HOME}/.local/bin:\${PATH}\"${NC}"
+
+        if $DRY_RUN; then
+            print_dry_run "Would add PATH export to shell profile"
+        else
+            # Determine shell profile to update
+            local shell_profile=""
+            local current_shell=$(basename "$SHELL")
+
+            if [[ "$current_shell" == "zsh" ]]; then
+                shell_profile="${HOME}/.zshrc"
+            elif [[ "$current_shell" == "bash" ]]; then
+                if [[ "$OSTYPE" == "darwin"* ]]; then
+                    shell_profile="${HOME}/.bash_profile"
+                else
+                    shell_profile="${HOME}/.bashrc"
+                fi
+            fi
+
+            if [[ -n "$shell_profile" ]]; then
+                local path_line='export PATH="${HOME}/.local/bin:${PATH}"'
+
+                # Check if already present (avoid duplicates)
+                if [[ -f "$shell_profile" ]] && grep -qF '.local/bin' "$shell_profile"; then
+                    print_info "PATH already configured in $shell_profile"
+                else
+                    echo "" >> "$shell_profile"
+                    echo "# Added by claude-remote installer" >> "$shell_profile"
+                    echo "$path_line" >> "$shell_profile"
+                    print_success "Added PATH to $shell_profile"
+                    print_info "Run 'source $shell_profile' or restart your terminal"
+                fi
+
+                # Also add to current session
+                export PATH="${LOCAL_BIN}:${PATH}"
+            else
+                print_info "Add this to your shell profile manually:"
+                echo -e "        ${YELLOW}export PATH=\"\${HOME}/.local/bin:\${PATH}\"${NC}"
+            fi
+        fi
     fi
 }
 
@@ -730,12 +788,17 @@ setup_tailscale() {
 
         if [[ "$OS" == "macos" ]]; then
             # macOS: The Tailscale app handles authentication via GUI
-            print_info "Please connect using the Tailscale app:"
+            echo ""
+            print_warning "ACTION REQUIRED: You must log in to Tailscale to continue"
+            echo ""
+            print_info "Look for the Tailscale icon in the menu bar (upper right corner of your screen)"
             print_info "  1. Click the Tailscale icon in the menu bar"
             print_info "  2. Click 'Log in' or 'Connect'"
             print_info "  3. Complete authentication in your browser"
             echo ""
-            echo -e "${BOLD}Press Enter once you've connected via the Tailscale app...${NC}"
+            print_warning "This installer is PAUSED and will wait indefinitely until you log in"
+            echo ""
+            echo -e "${BOLD}Press Enter once you've logged in via the Tailscale menu bar app...${NC}"
             read -r
 
             # Check if now connected
@@ -910,7 +973,13 @@ configure_boot_persistence() {
 
     if [[ "$OS" == "macos" ]]; then
         # macOS: LaunchAgents start at user login by default
-        print_info "macOS LaunchAgents are configured to start at login"
+        echo ""
+        print_info "IMPORTANT: Understanding macOS service persistence"
+        echo ""
+        print_info "On macOS, there are two types of startup services:"
+        print_info "  1. LaunchAgents  - Start when YOU log in (current setup)"
+        print_info "  2. LaunchDaemons - Start at BOOT before anyone logs in"
+        echo ""
 
         if $DRY_RUN; then
             print_dry_run "macOS: Services already configured for login startup"
@@ -919,30 +988,45 @@ configure_boot_persistence() {
 
         # Verify services are set to load at login
         if [[ -f "${HOME}/Library/LaunchAgents/com.claude.web.plist" ]]; then
-            print_success "Web terminal service will start at login"
+            print_success "Web terminal service installed as LaunchAgent"
         fi
 
         echo ""
-        print_info "For services to start before login (at boot):"
-        print_info "  Move plist to /Library/LaunchDaemons (requires admin)"
-        print_info "  Current setup starts services when you log in"
+        print_warning "CURRENT BEHAVIOR: Services start when you log in to your Mac"
+        print_info "This means after a reboot, you must log in (locally or via SSH)"
+        print_info "before the web terminal becomes available."
+        echo ""
+        print_info "FOR HEADLESS/REMOTE MAC SETUP:"
+        print_info "  Option 1: Enable 'Automatic Login' in System Settings > Users & Groups"
+        print_info "            This logs you in at boot, starting all LaunchAgents"
+        echo ""
+        print_info "  Option 2: Move services to LaunchDaemons (advanced, requires admin):"
+        print_info "            sudo mv ~/Library/LaunchAgents/com.claude.*.plist /Library/LaunchDaemons/"
+        print_info "            Then update the plist to run as your user"
+        echo ""
+        print_info "  Option 3: SSH in after reboot to trigger login and start services"
+        echo ""
 
         return
     fi
 
     # Linux: Enable systemd user lingering
-    print_info "Enabling systemd lingering for user services..."
+    echo ""
+    print_info "IMPORTANT: Understanding Linux service persistence"
+    echo ""
+    print_info "By default, systemd user services only run while you're logged in."
+    print_info "For a headless/remote server, this is a problem - after reboot,"
+    print_info "services won't start until you SSH in."
+    echo ""
+    print_info "Enabling 'lingering' solves this by:"
+    print_info "  - Starting your user services at BOOT (no login required)"
+    print_info "  - Keeping services running even after you log out"
+    echo ""
 
     if $DRY_RUN; then
         print_dry_run "sudo loginctl enable-linger $(whoami)"
         return
     fi
-
-    echo ""
-    print_info "By default, user services only run when you're logged in."
-    print_info "Enabling 'lingering' allows services to start at boot"
-    print_info "and continue running even when you log out."
-    echo ""
 
     echo -e "${BOLD}Enable services to start at boot and survive logout? [Y/n]${NC} "
     read -r response
@@ -951,14 +1035,16 @@ configure_boot_persistence() {
     if [[ "$response" =~ ^[Yy]$ ]] || [[ -z "$response" ]]; then
         if sudo loginctl enable-linger "$(whoami)"; then
             print_success "Lingering enabled - services will survive reboots"
-            print_info "Services start at boot, not just at login"
+            print_info "Your services will now start automatically at boot"
+            print_info "No need to log in - they just work after reboot"
         else
             print_warning "Failed to enable lingering"
             print_info "Run manually: sudo loginctl enable-linger $(whoami)"
         fi
     else
-        print_info "Skipping lingering configuration"
-        print_info "Services will only run while you're logged in"
+        print_warning "Skipping lingering configuration"
+        print_info "WARNING: Services will only run while you're logged in"
+        print_info "After reboot, you must SSH in before web terminal is available"
         print_info "Enable later: sudo loginctl enable-linger $(whoami)"
     fi
 }
@@ -1060,6 +1146,9 @@ main() {
         print_error "Unsupported operating system"
         exit 1
     fi
+
+    # Ensure Homebrew is in PATH (macOS)
+    init_homebrew_path
 
     # Install packages
     print_step "Installing dependencies"

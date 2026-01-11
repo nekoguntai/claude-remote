@@ -14,6 +14,22 @@ CYAN='\033[0;36m'
 BOLD='\033[1m'
 NC='\033[0m'
 
+# Ensure Homebrew is in PATH on macOS (may not be set in non-interactive shells)
+if [[ "$OSTYPE" == "darwin"* ]]; then
+    if ! command -v brew &>/dev/null; then
+        if [[ -f "/opt/homebrew/bin/brew" ]]; then
+            eval "$(/opt/homebrew/bin/brew shellenv)"
+        elif [[ -f "/usr/local/bin/brew" ]]; then
+            eval "$(/usr/local/bin/brew shellenv)"
+        fi
+    fi
+fi
+
+# Ensure ~/.local/bin is in PATH
+if [[ -d "${HOME}/.local/bin" ]] && [[ ":$PATH:" != *":${HOME}/.local/bin:"* ]]; then
+    export PATH="${HOME}/.local/bin:${PATH}"
+fi
+
 echo -e "${BOLD}${BLUE}═══════════════════════════════════════════════════════════${NC}"
 echo -e "${BOLD}${BLUE}                    Claude Remote Status                     ${NC}"
 echo -e "${BOLD}${BLUE}═══════════════════════════════════════════════════════════${NC}"
