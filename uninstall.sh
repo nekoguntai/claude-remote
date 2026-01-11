@@ -55,7 +55,12 @@ if [[ "$OSTYPE" == "darwin"* ]]; then
     if [[ -f "${HOME}/Library/LaunchAgents/com.claude.web.plist" ]]; then
         launchctl unload "${HOME}/Library/LaunchAgents/com.claude.web.plist" 2>/dev/null || true
         rm -f "${HOME}/Library/LaunchAgents/com.claude.web.plist"
-        print_success "Removed launchd service"
+        print_success "Removed web launchd service"
+    fi
+    if [[ -f "${HOME}/Library/LaunchAgents/com.claude.maintenance.plist" ]]; then
+        launchctl unload "${HOME}/Library/LaunchAgents/com.claude.maintenance.plist" 2>/dev/null || true
+        rm -f "${HOME}/Library/LaunchAgents/com.claude.maintenance.plist"
+        print_success "Removed maintenance launchd service"
     fi
 else
     # Linux
@@ -63,15 +68,22 @@ else
         systemctl --user stop claude-web.service 2>/dev/null || true
         systemctl --user disable claude-web.service 2>/dev/null || true
         rm -f "${HOME}/.config/systemd/user/claude-web.service"
-        systemctl --user daemon-reload
-        print_success "Removed systemd service"
+        print_success "Removed web systemd service"
     fi
+    if [[ -f "${HOME}/.config/systemd/user/claude-maintenance.timer" ]]; then
+        systemctl --user stop claude-maintenance.timer 2>/dev/null || true
+        systemctl --user disable claude-maintenance.timer 2>/dev/null || true
+        rm -f "${HOME}/.config/systemd/user/claude-maintenance.timer"
+        rm -f "${HOME}/.config/systemd/user/claude-maintenance.service"
+        print_success "Removed maintenance systemd timer"
+    fi
+    systemctl --user daemon-reload
 fi
 
 # Remove scripts
 print_step "Removing scripts"
 
-SCRIPTS=("claude-session" "web-terminal" "ttyd-wrapper" "claude-status")
+SCRIPTS=("claude-session" "web-terminal" "ttyd-wrapper" "claude-status" "claude-maintenance")
 for script in "${SCRIPTS[@]}"; do
     if [[ -f "${LOCAL_BIN}/${script}" ]]; then
         rm -f "${LOCAL_BIN}/${script}"

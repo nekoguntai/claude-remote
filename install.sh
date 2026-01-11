@@ -216,12 +216,14 @@ install_scripts() {
     cp "${SCRIPT_DIR}/scripts/web-terminal" "${LOCAL_BIN}/"
     cp "${SCRIPT_DIR}/scripts/ttyd-wrapper" "${LOCAL_BIN}/"
     cp "${SCRIPT_DIR}/scripts/status" "${LOCAL_BIN}/claude-status"
+    cp "${SCRIPT_DIR}/scripts/maintenance" "${LOCAL_BIN}/claude-maintenance"
 
     # Make executable
     chmod +x "${LOCAL_BIN}/claude-session"
     chmod +x "${LOCAL_BIN}/web-terminal"
     chmod +x "${LOCAL_BIN}/ttyd-wrapper"
     chmod +x "${LOCAL_BIN}/claude-status"
+    chmod +x "${LOCAL_BIN}/claude-maintenance"
 
     print_success "Scripts installed to ${LOCAL_BIN}"
 
@@ -248,44 +250,58 @@ install_tmux_config() {
 }
 
 install_service_linux() {
-    print_step "Installing systemd service"
+    print_step "Installing systemd services"
 
     # Create user systemd directory
     mkdir -p "${HOME}/.config/systemd/user"
 
-    # Copy service file, substituting home directory
+    # Copy web service file, substituting home directory
     sed "s|%h|${HOME}|g" "${SCRIPT_DIR}/systemd/claude-web.service" > "${HOME}/.config/systemd/user/claude-web.service"
+
+    # Copy maintenance service and timer
+    sed "s|%h|${HOME}|g" "${SCRIPT_DIR}/systemd/claude-maintenance.service" > "${HOME}/.config/systemd/user/claude-maintenance.service"
+    cp "${SCRIPT_DIR}/systemd/claude-maintenance.timer" "${HOME}/.config/systemd/user/claude-maintenance.timer"
 
     # Reload systemd
     systemctl --user daemon-reload
 
-    # Enable and start service
+    # Enable and start web service
     systemctl --user enable claude-web.service
     systemctl --user start claude-web.service
 
-    print_success "Systemd service installed and started"
-    print_info "Manage with: systemctl --user {start|stop|restart|status} claude-web.service"
+    # Enable maintenance timer (runs weekly)
+    systemctl --user enable claude-maintenance.timer
+    systemctl --user start claude-maintenance.timer
+
+    print_success "Systemd services installed and started"
+    print_info "Web service: systemctl --user {start|stop|restart|status} claude-web.service"
+    print_info "Maintenance: runs weekly (systemctl --user list-timers)"
 }
 
 install_service_macos() {
-    print_step "Installing launchd service"
+    print_step "Installing launchd services"
 
     # Create LaunchAgents directory
     mkdir -p "${HOME}/Library/LaunchAgents"
 
-    # Copy and customize plist (replace HOMEDIR placeholder)
+    # Copy and customize web service plist (replace HOMEDIR placeholder)
     sed "s|HOMEDIR|${HOME}|g" "${SCRIPT_DIR}/launchd/com.claude.web.plist" > "${HOME}/Library/LaunchAgents/com.claude.web.plist"
+
+    # Copy and customize maintenance plist
+    sed "s|HOMEDIR|${HOME}|g" "${SCRIPT_DIR}/launchd/com.claude.maintenance.plist" > "${HOME}/Library/LaunchAgents/com.claude.maintenance.plist"
 
     # Update ttyd path if installed via brew (Apple Silicon)
     if [[ -f "/opt/homebrew/bin/ttyd" ]]; then
         sed -i '' "s|/usr/local/bin/ttyd|/opt/homebrew/bin/ttyd|g" "${HOME}/Library/LaunchAgents/com.claude.web.plist"
     fi
 
-    # Load the service
+    # Load the services
     launchctl load "${HOME}/Library/LaunchAgents/com.claude.web.plist"
+    launchctl load "${HOME}/Library/LaunchAgents/com.claude.maintenance.plist"
 
-    print_success "Launchd service installed and started"
-    print_info "Manage with: launchctl {load|unload} ~/Library/LaunchAgents/com.claude.web.plist"
+    print_success "Launchd services installed and started"
+    print_info "Web service: launchctl {load|unload} ~/Library/LaunchAgents/com.claude.web.plist"
+    print_info "Maintenance: runs weekly (Sundays 3:00 AM)"
 }
 
 setup_tailscale() {

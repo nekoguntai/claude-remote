@@ -489,6 +489,76 @@ launchctl unload ~/Library/LaunchAgents/com.claude.web.plist
 launchctl load ~/Library/LaunchAgents/com.claude.web.plist
 ```
 
+## Maintenance (Perpetual Operation)
+
+Claude Remote includes automatic maintenance to ensure stable long-term operation.
+
+### What Gets Cleaned Up
+
+| Resource | Cleanup | Frequency |
+|----------|---------|-----------|
+| **Log files (macOS)** | Rotated when >10MB, keep 4 backups | Weekly |
+| **Orphaned mosh-servers** | Killed after 24+ hours without terminal | Weekly |
+| **Disk space** | Monitored and warned if low | Weekly |
+
+### Automatic Maintenance
+
+Maintenance runs automatically every Sunday at 3:00 AM:
+
+**Linux:**
+```bash
+# Check timer status
+systemctl --user list-timers claude-maintenance.timer
+
+# View last maintenance run
+journalctl --user -u claude-maintenance.service
+```
+
+**macOS:**
+```bash
+# View maintenance logs
+cat ~/.local/share/claude-remote/maintenance.log
+```
+
+### Manual Maintenance
+
+Run maintenance manually at any time:
+
+```bash
+# Full maintenance
+claude-maintenance
+
+# Dry run (show what would be done)
+claude-maintenance --dry-run
+
+# Specific tasks only
+claude-maintenance --logs      # Rotate logs only
+claude-maintenance --mosh      # Clean mosh servers only
+claude-maintenance --sessions  # Show session info only
+```
+
+### Long-Running Server Tips
+
+1. **Enable lingering** for systemd services to survive logout:
+   ```bash
+   sudo loginctl enable-linger $USER
+   ```
+
+2. **Monitor disk space** - logs and scrollback can accumulate:
+   ```bash
+   df -h ~
+   du -sh ~/.local/share/claude-remote/
+   ```
+
+3. **Clear scrollback** after sensitive operations:
+   - Press `Ctrl+a C-k` to clear tmux scrollback
+
+4. **Review sessions periodically**:
+   ```bash
+   claude-session --list
+   claude-session --kill unused-session
+   ```
+
 ## Troubleshooting
 
 ### Mosh connection fails

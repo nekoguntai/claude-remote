@@ -156,11 +156,15 @@ claude-remote/
 │   ├── claude-session      # Session management (create/attach/list/kill)
 │   ├── web-terminal        # ttyd wrapper for tmux attachment
 │   ├── ttyd-wrapper        # Credential loading wrapper for services
-│   └── status              # Status display utility
+│   ├── status              # Status display utility
+│   └── maintenance         # Cleanup and maintenance tasks
 ├── systemd/
-│   └── claude-web.service  # Linux systemd user service
+│   ├── claude-web.service          # Linux systemd user service
+│   ├── claude-maintenance.service  # Maintenance oneshot service
+│   └── claude-maintenance.timer    # Weekly maintenance timer
 ├── launchd/
-│   └── com.claude.web.plist # macOS launchd agent
+│   ├── com.claude.web.plist         # macOS launchd agent
+│   └── com.claude.maintenance.plist # macOS maintenance agent
 ├── README.md               # User documentation
 └── DESIGN.md               # This file
 ```

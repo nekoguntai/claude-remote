@@ -1,0 +1,15 @@
+[Unit]
+Description=Claude Remote Maintenance
+Documentation=https://github.com/nekoguntai/claude-remote
+
+[Service]
+Type=oneshot
+ExecStart=%h/.local/bin/claude-maintenance
+Nice=19
+IOSchedulingClass=idle
+
+# Run with minimal privileges
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=read-only
+ReadWritePaths=%h/.local/share/claude-remote
