@@ -25,9 +25,9 @@ if [[ "$OSTYPE" == "darwin"* ]]; then
     fi
 fi
 
-CONFIG_DIR="${HOME}/.config/claude-remote"
+CONFIG_DIR="${HOME}/.config/anyshell"
 CRED_FILE="${CONFIG_DIR}/web-credentials"
-SESSION_NAME="${CLAUDE_SESSION:-main}"
+SESSION_NAME="${ANYSHELL_SESSION:-main}"
 
 # Warn on multi-user systems
 check_multi_user() {

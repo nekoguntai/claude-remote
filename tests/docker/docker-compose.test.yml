@@ -13,10 +13,10 @@ services:
     build:
       context: ../..
       dockerfile: tests/docker/Dockerfile.debian
-    container_name: claude-remote-test-debian
+    container_name: anyshell-test-debian
 
   test-fedora:
     build:
       context: ../..
       dockerfile: tests/docker/Dockerfile.fedora
-    container_name: claude-remote-test-fedora
+    container_name: anyshell-test-fedora

@@ -1,6 +1,6 @@
 #!/usr/bin/env bats
 #
-# Tests for session name validation in claude-session
+# Tests for session name validation in anyshell
 #
 # These tests verify that the session name validation regex properly:
 # - Accepts valid session names
@@ -10,7 +10,7 @@
 
 load '../test_helper'
 
-# The regex pattern used in claude-session
+# The regex pattern used in anyshell
 VALID_PATTERN='^[a-zA-Z0-9_-]{1,64}$'
 
 # Helper to test if a name matches the validation pattern
@@ -296,7 +296,7 @@ validate_session_name() {
 # Integration test with actual script
 # =============================================================================
 
-@test "claude-session: exits with error for invalid session name" {
+@test "anyshell: exits with error for invalid session name" {
     # Extract and test the validate_session_name function from the actual script
     # We grep out the function definition and test it in isolation
     run bash -c "
@@ -311,7 +311,7 @@ validate_session_name() {
     [ "$status" -ne 0 ]
 }
 
-@test "claude-session: accepts valid session name" {
+@test "anyshell: accepts valid session name" {
     # Extract and test the validate_session_name function from the actual script
     run bash -c "
         validate_session_name() {

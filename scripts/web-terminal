@@ -22,7 +22,7 @@ if [[ -d "${HOME}/.local/bin" ]]; then
     export PATH="${HOME}/.local/bin:${PATH}"
 fi
 
-SESSION_NAME="${CLAUDE_SESSION:-main}"
+SESSION_NAME="${ANYSHELL_SESSION:-main}"
 
 # Validate session name to prevent injection attacks
 if [[ ! "$SESSION_NAME" =~ ^[a-zA-Z0-9_-]{1,64}$ ]]; then

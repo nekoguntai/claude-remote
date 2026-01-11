@@ -3,11 +3,11 @@
 <plist version="1.0">
 <dict>
     <key>Label</key>
-    <string>com.claude.maintenance</string>
+    <string>com.anyshell.maintenance</string>
 
     <key>ProgramArguments</key>
     <array>
-        <string>HOMEDIR/.local/bin/claude-maintenance</string>
+        <string>HOMEDIR/.local/bin/anyshell-maintenance</string>
     </array>
 
     <key>EnvironmentVariables</key>
@@ -30,10 +30,10 @@
     </dict>
 
     <key>StandardOutPath</key>
-    <string>HOMEDIR/.local/share/claude-remote/maintenance.log</string>
+    <string>HOMEDIR/.local/share/anyshell/maintenance.log</string>
 
     <key>StandardErrorPath</key>
-    <string>HOMEDIR/.local/share/claude-remote/maintenance.log</string>
+    <string>HOMEDIR/.local/share/anyshell/maintenance.log</string>
 
     <key>LowPriorityIO</key>
     <true/>

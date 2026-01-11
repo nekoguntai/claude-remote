@@ -277,5 +277,5 @@ load '../test_helper'
 
 @test "test infra: SCRIPTS_DIR points to scripts" {
     [ -d "${SCRIPTS_DIR}" ]
-    [ -f "${SCRIPTS_DIR}/claude-session" ]
+    [ -f "${SCRIPTS_DIR}/anyshell" ]
 }

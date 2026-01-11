@@ -174,13 +174,13 @@ jobs:
       - name: Build and test on Debian
         run: |
           echo "Building Debian test container..."
-          docker build -f tests/docker/Dockerfile.debian -t claude-remote-test-debian .
+          docker build -f tests/docker/Dockerfile.debian -t anyshell-test-debian .
           echo "Running Debian tests..."
-          docker run --rm claude-remote-test-debian
+          docker run --rm anyshell-test-debian
 
       - name: Build and test on Fedora
         run: |
           echo "Building Fedora test container..."
-          docker build -f tests/docker/Dockerfile.fedora -t claude-remote-test-fedora .
+          docker build -f tests/docker/Dockerfile.fedora -t anyshell-test-fedora .
           echo "Running Fedora tests..."
-          docker run --rm claude-remote-test-fedora
+          docker run --rm anyshell-test-fedora

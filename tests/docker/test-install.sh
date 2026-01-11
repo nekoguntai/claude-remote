@@ -31,7 +31,7 @@ info() {
 }
 
 echo "=============================================="
-echo "  Claude Remote Docker Integration Tests"
+echo "  Anyshell Docker Integration Tests"
 echo "=============================================="
 echo ""
 
@@ -169,7 +169,7 @@ fi
 echo ""
 echo "--- Test: Scripts are installed ---"
 SCRIPTS_OK=true
-for script in claude-session web-terminal ttyd-wrapper claude-status claude-maintenance; do
+for script in anyshell web-terminal ttyd-wrapper anyshell-status anyshell-maintenance; do
     if [ -x "$HOME/.local/bin/$script" ]; then
         pass "Script $script is installed and executable"
     else
@@ -183,7 +183,7 @@ done
 # =============================================================================
 echo ""
 echo "--- Test: Config directory exists ---"
-if [ -d "$HOME/.config/claude-remote" ]; then
+if [ -d "$HOME/.config/anyshell" ]; then
     pass "Config directory exists"
 else
     fail "Config directory missing"
@@ -194,7 +194,7 @@ fi
 # =============================================================================
 echo ""
 echo "--- Test: Credentials file has correct permissions ---"
-CRED_FILE="$HOME/.config/claude-remote/web-credentials"
+CRED_FILE="$HOME/.config/anyshell/web-credentials"
 if [ -f "$CRED_FILE" ]; then
     PERMS=$(stat -c %a "$CRED_FILE" 2>/dev/null || stat -f %Lp "$CRED_FILE" 2>/dev/null)
     if [ "$PERMS" = "600" ]; then
@@ -223,22 +223,22 @@ fi
 echo ""
 echo "--- Test: Systemd service files are installed ---"
 SYSTEMD_DIR="$HOME/.config/systemd/user"
-if [ -f "$SYSTEMD_DIR/claude-web.service" ]; then
-    pass "claude-web.service is installed"
+if [ -f "$SYSTEMD_DIR/anyshell-web.service" ]; then
+    pass "anyshell-web.service is installed"
 else
-    fail "claude-web.service is missing"
+    fail "anyshell-web.service is missing"
 fi
 
-if [ -f "$SYSTEMD_DIR/claude-maintenance.service" ]; then
-    pass "claude-maintenance.service is installed"
+if [ -f "$SYSTEMD_DIR/anyshell-maintenance.service" ]; then
+    pass "anyshell-maintenance.service is installed"
 else
-    fail "claude-maintenance.service is missing"
+    fail "anyshell-maintenance.service is missing"
 fi
 
-if [ -f "$SYSTEMD_DIR/claude-maintenance.timer" ]; then
-    pass "claude-maintenance.timer is installed"
+if [ -f "$SYSTEMD_DIR/anyshell-maintenance.timer" ]; then
+    pass "anyshell-maintenance.timer is installed"
 else
-    fail "claude-maintenance.timer is missing"
+    fail "anyshell-maintenance.timer is missing"
 fi
 
 # =============================================================================
@@ -278,25 +278,25 @@ else
 fi
 
 # =============================================================================
-# Test 17: Test claude-session help
+# Test 17: Test anyshell help
 # =============================================================================
 echo ""
-echo "--- Test: claude-session --help works ---"
-if "$HOME/.local/bin/claude-session" --help 2>&1 | grep -qi "usage\|session"; then
-    pass "claude-session --help works"
+echo "--- Test: anyshell --help works ---"
+if "$HOME/.local/bin/anyshell" --help 2>&1 | grep -qi "usage\|session"; then
+    pass "anyshell --help works"
 else
-    fail "claude-session --help failed"
+    fail "anyshell --help failed"
 fi
 
 # =============================================================================
 # Test 18: Test status command
 # =============================================================================
 echo ""
-echo "--- Test: claude-status command works ---"
-if "$HOME/.local/bin/claude-status" 2>&1; then
-    pass "claude-status command works"
+echo "--- Test: anyshell-status command works ---"
+if "$HOME/.local/bin/anyshell-status" 2>&1; then
+    pass "anyshell-status command works"
 else
-    fail "claude-status command failed"
+    fail "anyshell-status command failed"
 fi
 
 # =============================================================================

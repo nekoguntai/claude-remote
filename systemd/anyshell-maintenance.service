@@ -1,0 +1,15 @@
+[Unit]
+Description=Anyshell Maintenance
+Documentation=https://github.com/nekoguntai/anyshell
+
+[Service]
+Type=oneshot
+ExecStart=%h/.local/bin/anyshell-maintenance
+Nice=19
+IOSchedulingClass=idle
+
+# Run with minimal privileges
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=read-only
+ReadWritePaths=%h/.local/share/anyshell

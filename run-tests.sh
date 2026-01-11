@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# run-tests.sh - Run the test suite for claude-remote
+# run-tests.sh - Run the test suite for anyshell
 #
 # Usage:
 #   ./run-tests.sh           # Run all tests
@@ -100,11 +100,11 @@ run_shellcheck() {
     local scripts=(
         "install.sh"
         "uninstall.sh"
-        "scripts/claude-session"
+        "scripts/anyshell"
         "scripts/web-terminal"
         "scripts/ttyd-wrapper"
-        "scripts/status"
-        "scripts/maintenance"
+        "scripts/anyshell-status"
+        "scripts/anyshell-maintenance"
     )
 
     local failed=0
@@ -131,11 +131,11 @@ run_syntax_check() {
     local scripts=(
         "install.sh"
         "uninstall.sh"
-        "scripts/claude-session"
+        "scripts/anyshell"
         "scripts/web-terminal"
         "scripts/ttyd-wrapper"
-        "scripts/status"
-        "scripts/maintenance"
+        "scripts/anyshell-status"
+        "scripts/anyshell-maintenance"
     )
 
     local failed=0

@@ -1,6 +1,6 @@
-# Claude Remote - Design Document
+# Anyshell - Design Document
 
-This document captures all design decisions, architecture choices, and implementation details for the Claude Remote project.
+This document captures all design decisions, architecture choices, and implementation details for the Anyshell project.
 
 ## Project Goal
 
@@ -147,24 +147,24 @@ Layer 4: Session Lock
 ## File Structure
 
 ```
-claude-remote/
+anyshell/
 ├── install.sh              # Main installer (OS detection, package install, service setup)
 ├── uninstall.sh            # Clean removal
 ├── config/
 │   └── tmux.conf           # Optimized tmux configuration
 ├── scripts/
-│   ├── claude-session      # Session management (create/attach/list/kill)
+│   ├── anyshell      # Session management (create/attach/list/kill)
 │   ├── web-terminal        # ttyd wrapper for tmux attachment
 │   ├── ttyd-wrapper        # Credential loading wrapper for services
 │   ├── status              # Status display utility
 │   └── maintenance         # Cleanup and maintenance tasks
 ├── systemd/
-│   ├── claude-web.service          # Linux systemd user service
-│   ├── claude-maintenance.service  # Maintenance oneshot service
-│   └── claude-maintenance.timer    # Weekly maintenance timer
+│   ├── anyshell-web.service          # Linux systemd user service
+│   ├── anyshell-maintenance.service  # Maintenance oneshot service
+│   └── anyshell-maintenance.timer    # Weekly maintenance timer
 ├── launchd/
-│   ├── com.claude.web.plist         # macOS launchd agent
-│   └── com.claude.maintenance.plist # macOS maintenance agent
+│   ├── com.anyshell.web.plist         # macOS launchd agent
+│   └── com.anyshell.maintenance.plist # macOS maintenance agent
 ├── README.md               # User documentation
 └── DESIGN.md               # This file
 ```
@@ -174,12 +174,12 @@ claude-remote/
 | Path | Purpose | Permissions |
 |------|---------|-------------|
 | `~/.tmux.conf` | tmux configuration | 644 |
-| `~/.config/claude-remote/web-credentials` | Web terminal password | 600 |
-| `~/.config/systemd/user/claude-web.service` | Linux service | 644 |
-| `~/Library/LaunchAgents/com.claude.web.plist` | macOS service | 644 |
-| `~/.local/bin/claude-session` | Session script | 755 |
+| `~/.config/anyshell/web-credentials` | Web terminal password | 600 |
+| `~/.config/systemd/user/anyshell-web.service` | Linux service | 644 |
+| `~/Library/LaunchAgents/com.anyshell.web.plist` | macOS service | 644 |
+| `~/.local/bin/anyshell` | Session script | 755 |
 | `~/.local/bin/ttyd-wrapper` | Service wrapper | 755 |
-| `~/.local/share/claude-remote/` | Logs directory | 700 |
+| `~/.local/share/anyshell/` | Logs directory | 700 |
 
 ## Key Implementation Details
 
@@ -188,7 +188,7 @@ claude-remote/
 Problem: systemd/launchd can't easily read files for command arguments.
 
 Solution: Created `ttyd-wrapper` script that:
-1. Reads password from `~/.config/claude-remote/web-credentials`
+1. Reads password from `~/.config/anyshell/web-credentials`
 2. Constructs ttyd command with `--credential` flag
 3. Executed by service instead of ttyd directly
 
@@ -220,7 +220,7 @@ PrivateTmp=true
 PrivateDevices=true
 ProtectSystem=strict
 ProtectHome=read-only
-ReadWritePaths=%h/.local/share/claude-remote %h/.config/claude-remote
+ReadWritePaths=%h/.local/share/anyshell %h/.config/anyshell
 ProtectKernelTunables=true
 ProtectKernelModules=true
 ProtectControlGroups=true

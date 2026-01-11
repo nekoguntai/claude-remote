@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 #
-# claude-session - Create or attach to a persistent tmux session
+# anyshell - Create or attach to a persistent tmux session
 #
-# Usage: claude-session [session-name]
-#        claude-session --list
-#        claude-session --kill <session-name>
+# Usage: anyshell [session-name]
+#        anyshell --list
+#        anyshell --kill <session-name>
 #
 
 set -e
@@ -47,23 +47,23 @@ print_error() {
 
 show_help() {
     cat << EOF
-claude-session - Persistent tmux session manager
+anyshell - Persistent tmux session manager
 
 Usage:
-    claude-session [session-name]    Create or attach to session (default: main)
-    claude-session --list            List all active sessions
-    claude-session --kill <name>     Kill a specific session
-    claude-session --kill-all        Kill all sessions
-    claude-session --help            Show this help
+    anyshell [session-name]    Create or attach to session (default: main)
+    anyshell --list            List all active sessions
+    anyshell --kill <name>     Kill a specific session
+    anyshell --kill-all        Kill all sessions
+    anyshell --help            Show this help
 
 Session names:
     Must contain only alphanumeric characters, underscores, and hyphens.
     Examples: main, claude, my-project, work_2024
 
 Examples:
-    claude-session                   Attach to 'main' session
-    claude-session claude            Attach to 'claude' session
-    claude-session --list            Show all sessions
+    anyshell                   Attach to 'main' session
+    anyshell claude            Attach to 'claude' session
+    anyshell --list            Show all sessions
 
 Session Persistence:
     Sessions persist even when you disconnect. Start a long-running
@@ -86,7 +86,7 @@ validate_session_name() {
 list_sessions() {
     if tmux list-sessions 2>/dev/null; then
         echo ""
-        print_info "To attach: claude-session <session-name>"
+        print_info "To attach: anyshell <session-name>"
     else
         print_warning "No active tmux sessions"
     fi

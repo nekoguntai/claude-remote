@@ -3,7 +3,7 @@
 <plist version="1.0">
 <dict>
     <key>Label</key>
-    <string>com.claude.web</string>
+    <string>com.anyshell.web</string>
 
     <key>ProgramArguments</key>
     <array>
@@ -12,7 +12,7 @@
 
     <key>EnvironmentVariables</key>
     <dict>
-        <key>CLAUDE_SESSION</key>
+        <key>ANYSHELL_SESSION</key>
         <string>main</string>
         <key>PATH</key>
         <string>/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin:HOMEDIR/.local/bin</string>
@@ -30,10 +30,10 @@
     </dict>
 
     <key>StandardOutPath</key>
-    <string>HOMEDIR/.local/share/claude-remote/ttyd.log</string>
+    <string>HOMEDIR/.local/share/anyshell/ttyd.log</string>
 
     <key>StandardErrorPath</key>
-    <string>HOMEDIR/.local/share/claude-remote/ttyd.error.log</string>
+    <string>HOMEDIR/.local/share/anyshell/ttyd.error.log</string>
 
     <key>WorkingDirectory</key>
     <string>HOMEDIR</string>

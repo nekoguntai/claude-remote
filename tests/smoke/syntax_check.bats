@@ -26,8 +26,8 @@ load '../test_helper'
     [ "$status" -eq 0 ]
 }
 
-@test "syntax: claude-session parses without errors" {
-    run bash -n "${SCRIPTS_DIR}/claude-session"
+@test "syntax: anyshell parses without errors" {
+    run bash -n "${SCRIPTS_DIR}/anyshell"
 
     [ "$status" -eq 0 ]
 }
@@ -79,8 +79,8 @@ check_shebang() {
     [ "$status" -eq 0 ]
 }
 
-@test "shebang: claude-session has bash shebang" {
-    run check_shebang "${SCRIPTS_DIR}/claude-session"
+@test "shebang: anyshell has bash shebang" {
+    run check_shebang "${SCRIPTS_DIR}/anyshell"
 
     [ "$status" -eq 0 ]
 }
@@ -121,8 +121,8 @@ check_shebang() {
     [ -f "${PROJECT_ROOT}/uninstall.sh" ]
 }
 
-@test "file exists: scripts/claude-session" {
-    [ -f "${SCRIPTS_DIR}/claude-session" ]
+@test "file exists: scripts/anyshell" {
+    [ -f "${SCRIPTS_DIR}/anyshell" ]
 }
 
 @test "file exists: scripts/web-terminal" {
@@ -154,23 +154,23 @@ check_shebang() {
 }
 
 @test "config: systemd service file exists" {
-    [ -f "${PROJECT_ROOT}/systemd/claude-web.service" ]
+    [ -f "${PROJECT_ROOT}/systemd/anyshell-web.service" ]
 }
 
 @test "config: systemd maintenance service exists" {
-    [ -f "${PROJECT_ROOT}/systemd/claude-maintenance.service" ]
+    [ -f "${PROJECT_ROOT}/systemd/anyshell-maintenance.service" ]
 }
 
 @test "config: systemd maintenance timer exists" {
-    [ -f "${PROJECT_ROOT}/systemd/claude-maintenance.timer" ]
+    [ -f "${PROJECT_ROOT}/systemd/anyshell-maintenance.timer" ]
 }
 
 @test "config: launchd web plist exists" {
-    [ -f "${PROJECT_ROOT}/launchd/com.claude.web.plist" ]
+    [ -f "${PROJECT_ROOT}/launchd/com.anyshell.web.plist" ]
 }
 
 @test "config: launchd maintenance plist exists" {
-    [ -f "${PROJECT_ROOT}/launchd/com.claude.maintenance.plist" ]
+    [ -f "${PROJECT_ROOT}/launchd/com.anyshell.maintenance.plist" ]
 }
 
 # =============================================================================
@@ -188,8 +188,8 @@ check_set_e() {
     [ "$status" -eq 0 ]
 }
 
-@test "strict mode: claude-session uses set -e" {
-    run check_set_e "${SCRIPTS_DIR}/claude-session"
+@test "strict mode: anyshell uses set -e" {
+    run check_set_e "${SCRIPTS_DIR}/anyshell"
 
     [ "$status" -eq 0 ]
 }

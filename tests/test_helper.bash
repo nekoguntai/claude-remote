@@ -41,9 +41,9 @@ setup() {
     export TEST_TEMP_DIR
     export HOME="${TEST_TEMP_DIR}/home"
     mkdir -p "$HOME"
-    mkdir -p "${HOME}/.config/claude-remote"
+    mkdir -p "${HOME}/.config/anyshell"
     mkdir -p "${HOME}/.local/bin"
-    mkdir -p "${HOME}/.local/share/claude-remote"
+    mkdir -p "${HOME}/.local/share/anyshell"
 }
 
 # Cleanup after each test
@@ -65,8 +65,8 @@ source_functions() {
 # Create a mock credential file
 create_mock_credentials() {
     local password="${1:-testpassword123}"
-    echo "$password" > "${HOME}/.config/claude-remote/web-credentials"
-    chmod 600 "${HOME}/.config/claude-remote/web-credentials"
+    echo "$password" > "${HOME}/.config/anyshell/web-credentials"
+    chmod 600 "${HOME}/.config/anyshell/web-credentials"
 }
 
 # Create a mock ttyd binary

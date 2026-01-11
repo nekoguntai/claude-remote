@@ -16,19 +16,19 @@ load '../test_helper'
 # =============================================================================
 
 @test "credentials: config directory is created with 700 permissions" {
-    mkdir -p "${HOME}/.config/claude-remote"
-    chmod 700 "${HOME}/.config/claude-remote"
+    mkdir -p "${HOME}/.config/anyshell"
+    chmod 700 "${HOME}/.config/anyshell"
 
-    local perms=$(stat -c %a "${HOME}/.config/claude-remote" 2>/dev/null || stat -f %Lp "${HOME}/.config/claude-remote" 2>/dev/null)
+    local perms=$(stat -c %a "${HOME}/.config/anyshell" 2>/dev/null || stat -f %Lp "${HOME}/.config/anyshell" 2>/dev/null)
 
     [ "$perms" = "700" ]
 }
 
 @test "credentials: file is created with 600 permissions using umask" {
     # Test the pattern used in install.sh: (umask 077 && echo "password" > file)
-    (umask 077 && echo "test_password" > "${HOME}/.config/claude-remote/web-credentials")
+    (umask 077 && echo "test_password" > "${HOME}/.config/anyshell/web-credentials")
 
-    local perms=$(stat -c %a "${HOME}/.config/claude-remote/web-credentials" 2>/dev/null || stat -f %Lp "${HOME}/.config/claude-remote/web-credentials" 2>/dev/null)
+    local perms=$(stat -c %a "${HOME}/.config/anyshell/web-credentials" 2>/dev/null || stat -f %Lp "${HOME}/.config/anyshell/web-credentials" 2>/dev/null)
 
     # umask 077 creates files with 600 permissions
     [ "$perms" = "600" ]
@@ -38,7 +38,7 @@ load '../test_helper'
     create_mock_credentials "secret123"
 
     # Check that "other" has no read permission
-    local perms=$(stat -c %a "${HOME}/.config/claude-remote/web-credentials" 2>/dev/null || stat -f %Lp "${HOME}/.config/claude-remote/web-credentials" 2>/dev/null)
+    local perms=$(stat -c %a "${HOME}/.config/anyshell/web-credentials" 2>/dev/null || stat -f %Lp "${HOME}/.config/anyshell/web-credentials" 2>/dev/null)
 
     # Last digit should be 0 (no permissions for others)
     [[ "$perms" =~ .0$ ]]
@@ -47,7 +47,7 @@ load '../test_helper'
 @test "credentials: file is not group-readable" {
     create_mock_credentials "secret123"
 
-    local perms=$(stat -c %a "${HOME}/.config/claude-remote/web-credentials" 2>/dev/null || stat -f %Lp "${HOME}/.config/claude-remote/web-credentials" 2>/dev/null)
+    local perms=$(stat -c %a "${HOME}/.config/anyshell/web-credentials" 2>/dev/null || stat -f %Lp "${HOME}/.config/anyshell/web-credentials" 2>/dev/null)
 
     # Middle digit should be 0 (no permissions for group)
     [[ "$perms" =~ .0.$ ]]
@@ -61,34 +61,34 @@ load '../test_helper'
     local expected_password="mysecretpassword123"
     create_mock_credentials "$expected_password"
 
-    local actual_password=$(cat "${HOME}/.config/claude-remote/web-credentials")
+    local actual_password=$(cat "${HOME}/.config/anyshell/web-credentials")
 
     [ "$actual_password" = "$expected_password" ]
 }
 
 @test "credentials: password with special characters is preserved" {
     local password='P@$$w0rd!#%^&*()_+-=[]{}|;:,.<>?'
-    echo "$password" > "${HOME}/.config/claude-remote/web-credentials"
+    echo "$password" > "${HOME}/.config/anyshell/web-credentials"
 
-    local actual=$(cat "${HOME}/.config/claude-remote/web-credentials")
+    local actual=$(cat "${HOME}/.config/anyshell/web-credentials")
 
     [ "$actual" = "$password" ]
 }
 
 @test "credentials: password with spaces is preserved" {
     local password="password with spaces"
-    echo "$password" > "${HOME}/.config/claude-remote/web-credentials"
+    echo "$password" > "${HOME}/.config/anyshell/web-credentials"
 
-    local actual=$(cat "${HOME}/.config/claude-remote/web-credentials")
+    local actual=$(cat "${HOME}/.config/anyshell/web-credentials")
 
     [ "$actual" = "$password" ]
 }
 
 @test "credentials: no trailing newline issues" {
     # When reading with $(cat file), trailing newline is stripped
-    echo "password" > "${HOME}/.config/claude-remote/web-credentials"
+    echo "password" > "${HOME}/.config/anyshell/web-credentials"
 
-    local password=$(cat "${HOME}/.config/claude-remote/web-credentials")
+    local password=$(cat "${HOME}/.config/anyshell/web-credentials")
 
     [ "$password" = "password" ]
     [ ${#password} -eq 8 ]  # Exactly 8 characters, no newline
@@ -101,21 +101,21 @@ load '../test_helper'
 @test "credentials: missing file is detected" {
     # Don't create the credential file
 
-    [ ! -f "${HOME}/.config/claude-remote/web-credentials" ]
+    [ ! -f "${HOME}/.config/anyshell/web-credentials" ]
 }
 
 @test "credentials: empty file is detected" {
-    touch "${HOME}/.config/claude-remote/web-credentials"
+    touch "${HOME}/.config/anyshell/web-credentials"
 
-    local content=$(cat "${HOME}/.config/claude-remote/web-credentials")
+    local content=$(cat "${HOME}/.config/anyshell/web-credentials")
 
     [ -z "$content" ]
 }
 
 @test "credentials: whitespace-only file is detected as empty" {
-    echo "   " > "${HOME}/.config/claude-remote/web-credentials"
+    echo "   " > "${HOME}/.config/anyshell/web-credentials"
 
-    local content=$(cat "${HOME}/.config/claude-remote/web-credentials" | tr -d '[:space:]')
+    local content=$(cat "${HOME}/.config/anyshell/web-credentials" | tr -d '[:space:]')
 
     [ -z "$content" ]
 }
@@ -170,7 +170,7 @@ load '../test_helper'
     # The script should fail if credential file doesn't exist
     export HOME="${HOME}"
     run bash -c '
-        CONFIG_DIR="${HOME}/.config/claude-remote"
+        CONFIG_DIR="${HOME}/.config/anyshell"
         CRED_FILE="${CONFIG_DIR}/web-credentials"
         if [[ ! -f "$CRED_FILE" ]]; then
             exit 1
@@ -183,10 +183,10 @@ load '../test_helper'
 
 @test "ttyd-wrapper: detects empty credential file" {
     create_mock_ttyd
-    touch "${HOME}/.config/claude-remote/web-credentials"
+    touch "${HOME}/.config/anyshell/web-credentials"
 
     run bash -c '
-        CRED_FILE="${HOME}/.config/claude-remote/web-credentials"
+        CRED_FILE="${HOME}/.config/anyshell/web-credentials"
         WEB_PASSWORD="$(cat "$CRED_FILE")"
         if [[ -z "$WEB_PASSWORD" ]]; then
             exit 1
@@ -202,7 +202,7 @@ load '../test_helper'
     create_mock_credentials "validpassword123"
 
     run bash -c '
-        CRED_FILE="${HOME}/.config/claude-remote/web-credentials"
+        CRED_FILE="${HOME}/.config/anyshell/web-credentials"
         WEB_PASSWORD="$(cat "$CRED_FILE")"
         if [[ -z "$WEB_PASSWORD" ]]; then
             exit 1

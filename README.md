@@ -1,4 +1,4 @@
-# Claude Remote
+# Anyshell
 
 Persistent terminal sessions for mobile productivity. Run long processes, disconnect, and reconnect from any device without losing your session.
 
@@ -78,7 +78,7 @@ Persistent terminal sessions for mobile productivity. Run long processes, discon
 └──────────────────────────────────────────────────────────────────┘
 ```
 
-**Experience**: Open Blink Shell (iOS) or terminal, run `mosh user@server -- claude-session`. Works like SSH but survives Wi-Fi changes, sleep/wake, and brief disconnections. Best for extended sessions.
+**Experience**: Open Blink Shell (iOS) or terminal, run `mosh user@server -- anyshell`. Works like SSH but survives Wi-Fi changes, sleep/wake, and brief disconnections. Best for extended sessions.
 
 ### Web Terminal Connection (Browser Fallback)
 
@@ -141,12 +141,12 @@ Persistent terminal sessions for mobile productivity. Run long processes, discon
 
 These steps are performed once on your server (Linux or macOS machine that will host your sessions).
 
-### Step 1: Install Claude Remote
+### Step 1: Install Anyshell
 
 ```bash
 # Clone the repository
-git clone https://github.com/nekoguntai/claude-remote.git
-cd claude-remote
+git clone https://github.com/nekoguntai/anyshell.git
+cd anyshell
 
 # Run the installer
 ./install.sh
@@ -171,6 +171,11 @@ sudo tailscale up
 
 # macOS
 brew install tailscale
+```
+
+**Enable Tailscale Serve on your tailnet**: The web terminal uses Tailscale Serve to securely expose ttyd. If the installer shows a warning that Serve is not enabled, visit the URL provided (or go to https://login.tailscale.com/admin/machines) and enable Serve for your machine. Then run:
+```bash
+tailscale serve --bg --https 7681 http://127.0.0.1:7681
 ```
 
 Enable 2FA on your Tailscale account at https://login.tailscale.com/admin/settings/keys for additional security.
@@ -199,9 +204,9 @@ Create a systemd user service to start a tmux session on boot:
 ```bash
 mkdir -p ~/.config/systemd/user
 
-cat > ~/.config/systemd/user/claude-session.service << 'EOF'
+cat > ~/.config/systemd/user/anyshell.service << 'EOF'
 [Unit]
-Description=Claude tmux session
+Description=Anyshell tmux session
 After=default.target
 
 [Service]
@@ -214,8 +219,8 @@ Restart=on-failure
 WantedBy=default.target
 EOF
 
-systemctl --user enable claude-session.service
-systemctl --user start claude-session.service
+systemctl --user enable anyshell.service
+systemctl --user start anyshell.service
 
 # Enable lingering so service starts even when not logged in
 sudo loginctl enable-linger $USER
@@ -250,7 +255,7 @@ echo "set -g @continuum-save-interval '15'" >> ~/.tmux.conf
 ### Step 5: Verify Setup
 
 ```bash
-claude-status
+anyshell-status
 ```
 
 This shows:
@@ -326,10 +331,10 @@ Best for extended sessions - survives network changes, sleep/wake, and brief dis
 
 ```bash
 # Connect and attach to default session
-mosh user@yourserver -- claude-session
+mosh user@yourserver -- anyshell
 
 # Connect to a named session
-mosh user@yourserver -- claude-session work
+mosh user@yourserver -- anyshell work
 ```
 
 **Disconnecting**: Just close the terminal or put your device to sleep. The session keeps running.
@@ -341,7 +346,7 @@ mosh user@yourserver -- claude-session work
 For quick connections when mosh isn't available:
 
 ```bash
-ssh user@yourserver -t 'claude-session'
+ssh user@yourserver -t 'anyshell'
 ```
 
 Note: SSH connections don't survive network changes like mosh does.
@@ -354,19 +359,19 @@ When you don't have a terminal app (e.g., borrowed computer, tablet):
 2. Open your browser to `https://your-server-hostname:7681`
 3. Login with:
    - Username: `claude`
-   - Password: (from installation, or run `cat ~/.config/claude-remote/web-credentials` on server)
+   - Password: (from installation, or run `cat ~/.config/anyshell/web-credentials` on server)
 
 ### Working with Sessions
 
 ```bash
 # List all sessions (from server or while connected)
-claude-session --list
+anyshell --list
 
 # Create/attach to named session
-claude-session projectname
+anyshell projectname
 
 # Kill a session
-claude-session --kill projectname
+anyshell --kill projectname
 ```
 
 ### Detaching vs Disconnecting
@@ -375,16 +380,16 @@ claude-session --kill projectname
 |--------|--------------|--------------|
 | **Detach** | Cleanly exit, session keeps running | `Ctrl+a d` |
 | **Disconnect** | Close terminal/browser, session keeps running | Just close it |
-| **Kill session** | Terminate the session entirely | `claude-session --kill name` |
+| **Kill session** | Terminate the session entirely | `anyshell --kill name` |
 
 ### Check Server Status
 
 ```bash
 # From server
-claude-status
+anyshell-status
 
 # Remotely
-ssh user@yourserver claude-status
+ssh user@yourserver anyshell-status
 ```
 
 ## Security Model
@@ -461,37 +466,37 @@ The tmux configuration is installed to `~/.tmux.conf`. Key settings:
 - Status bar with session info
 
 ### Web terminal credentials
-Stored in `~/.config/claude-remote/web-credentials` with 600 permissions.
+Stored in `~/.config/anyshell/web-credentials` with 600 permissions.
 
 To regenerate credentials:
 ```bash
-openssl rand -hex 16 > ~/.config/claude-remote/web-credentials
-systemctl --user restart claude-web.service  # Linux
+openssl rand -hex 16 > ~/.config/anyshell/web-credentials
+systemctl --user restart anyshell-web.service  # Linux
 # or
-launchctl unload ~/Library/LaunchAgents/com.claude.web.plist && \
-launchctl load ~/Library/LaunchAgents/com.claude.web.plist  # macOS
+launchctl unload ~/Library/LaunchAgents/com.anyshell.web.plist && \
+launchctl load ~/Library/LaunchAgents/com.anyshell.web.plist  # macOS
 ```
 
 ### Service management
 
 **Linux (systemd):**
 ```bash
-systemctl --user status claude-web.service
-systemctl --user restart claude-web.service
-systemctl --user stop claude-web.service
-journalctl --user -u claude-web.service  # View logs
+systemctl --user status anyshell-web.service
+systemctl --user restart anyshell-web.service
+systemctl --user stop anyshell-web.service
+journalctl --user -u anyshell-web.service  # View logs
 ```
 
 **macOS (launchd):**
 ```bash
-launchctl list | grep claude
-launchctl unload ~/Library/LaunchAgents/com.claude.web.plist
-launchctl load ~/Library/LaunchAgents/com.claude.web.plist
+launchctl list | grep anyshell
+launchctl unload ~/Library/LaunchAgents/com.anyshell.web.plist
+launchctl load ~/Library/LaunchAgents/com.anyshell.web.plist
 ```
 
 ## Maintenance (Perpetual Operation)
 
-Claude Remote includes automatic maintenance to ensure stable long-term operation.
+Anyshell includes automatic maintenance to ensure stable long-term operation.
 
 ### What Gets Cleaned Up
 
@@ -508,16 +513,16 @@ Maintenance runs automatically every Sunday at 3:00 AM:
 **Linux:**
 ```bash
 # Check timer status
-systemctl --user list-timers claude-maintenance.timer
+systemctl --user list-timers anyshell-maintenance.timer
 
 # View last maintenance run
-journalctl --user -u claude-maintenance.service
+journalctl --user -u anyshell-maintenance.service
 ```
 
 **macOS:**
 ```bash
 # View maintenance logs
-cat ~/.local/share/claude-remote/maintenance.log
+cat ~/.local/share/anyshell/maintenance.log
 ```
 
 ### Manual Maintenance
@@ -526,15 +531,15 @@ Run maintenance manually at any time:
 
 ```bash
 # Full maintenance
-claude-maintenance
+anyshell-maintenance
 
 # Dry run (show what would be done)
-claude-maintenance --dry-run
+anyshell-maintenance --dry-run
 
 # Specific tasks only
-claude-maintenance --logs      # Rotate logs only
-claude-maintenance --mosh      # Clean mosh servers only
-claude-maintenance --sessions  # Show session info only
+anyshell-maintenance --logs      # Rotate logs only
+anyshell-maintenance --mosh      # Clean mosh servers only
+anyshell-maintenance --sessions  # Show session info only
 ```
 
 ### Long-Running Server Tips
@@ -547,7 +552,7 @@ claude-maintenance --sessions  # Show session info only
 2. **Monitor disk space** - logs and scrollback can accumulate:
    ```bash
    df -h ~
-   du -sh ~/.local/share/claude-remote/
+   du -sh ~/.local/share/anyshell/
    ```
 
 3. **Clear scrollback** after sensitive operations:
@@ -555,8 +560,8 @@ claude-maintenance --sessions  # Show session info only
 
 4. **Review sessions periodically**:
    ```bash
-   claude-session --list
-   claude-session --kill unused-session
+   anyshell --list
+   anyshell --kill unused-session
    ```
 
 ## Troubleshooting
@@ -566,19 +571,23 @@ claude-maintenance --sessions  # Show session info only
 2. Check that mosh-server is installed: `which mosh-server`
 
 ### Web terminal not accessible
-1. Check service status: `claude-status`
+1. Check service status: `anyshell-status`
 2. Verify ttyd is running: `pgrep -a ttyd`
-3. Check credentials exist: `cat ~/.config/claude-remote/web-credentials`
+3. Check credentials exist: `cat ~/.config/anyshell/web-credentials`
 4. Verify Tailscale Serve: `tailscale serve status`
+5. If Serve shows "No serve config", you may need to enable it on your tailnet first:
+   - Run `tailscale serve --bg --https 7681 http://127.0.0.1:7681`
+   - If prompted, visit the URL shown to enable Serve on your tailnet
+   - Then re-run the serve command above
 
 ### "Authentication failed" on web terminal
 1. Ensure you're using username `claude`
-2. Check your password: `cat ~/.config/claude-remote/web-credentials`
+2. Check your password: `cat ~/.config/anyshell/web-credentials`
 
 ### tmux session lost after reboot
 See [Step 4: Surviving Server Reboots](#step-4-surviving-server-reboots) in the Server Setup section.
 
-### "claude-session: command not found"
+### "anyshell: command not found"
 Add `~/.local/bin` to your PATH:
 ```bash
 echo 'export PATH="${HOME}/.local/bin:${PATH}"' >> ~/.bashrc

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# Claude Remote - Uninstallation Script
+# Anyshell - Uninstallation Script
 #
 
 set -e
@@ -14,8 +14,8 @@ BOLD='\033[1m'
 NC='\033[0m'
 
 LOCAL_BIN="${HOME}/.local/bin"
-LOCAL_SHARE="${HOME}/.local/share/claude-remote"
-CONFIG_DIR="${HOME}/.config/claude-remote"
+LOCAL_SHARE="${HOME}/.local/share/anyshell"
+CONFIG_DIR="${HOME}/.config/anyshell"
 
 print_step() {
     echo -e "\n${BOLD}${BLUE}▶ $1${NC}"
@@ -35,12 +35,12 @@ print_info() {
 
 echo -e "${BOLD}${RED}"
 echo "╔═══════════════════════════════════════════════════════════╗"
-echo "║               Claude Remote Uninstaller                   ║"
+echo "║               Anyshell Uninstaller                   ║"
 echo "╚═══════════════════════════════════════════════════════════╝"
 echo -e "${NC}"
 
 # Confirm uninstall
-read -p "Are you sure you want to uninstall Claude Remote? [y/N] " -n 1 -r
+read -p "Are you sure you want to uninstall Anyshell? [y/N] " -n 1 -r
 echo
 if [[ ! $REPLY =~ ^[Yy]$ ]]; then
     echo "Uninstall cancelled."
@@ -52,29 +52,29 @@ print_step "Stopping services"
 
 if [[ "$OSTYPE" == "darwin"* ]]; then
     # macOS
-    if [[ -f "${HOME}/Library/LaunchAgents/com.claude.web.plist" ]]; then
-        launchctl unload "${HOME}/Library/LaunchAgents/com.claude.web.plist" 2>/dev/null || true
-        rm -f "${HOME}/Library/LaunchAgents/com.claude.web.plist"
+    if [[ -f "${HOME}/Library/LaunchAgents/com.anyshell.web.plist" ]]; then
+        launchctl unload "${HOME}/Library/LaunchAgents/com.anyshell.web.plist" 2>/dev/null || true
+        rm -f "${HOME}/Library/LaunchAgents/com.anyshell.web.plist"
         print_success "Removed web launchd service"
     fi
-    if [[ -f "${HOME}/Library/LaunchAgents/com.claude.maintenance.plist" ]]; then
-        launchctl unload "${HOME}/Library/LaunchAgents/com.claude.maintenance.plist" 2>/dev/null || true
-        rm -f "${HOME}/Library/LaunchAgents/com.claude.maintenance.plist"
+    if [[ -f "${HOME}/Library/LaunchAgents/com.anyshell.maintenance.plist" ]]; then
+        launchctl unload "${HOME}/Library/LaunchAgents/com.anyshell.maintenance.plist" 2>/dev/null || true
+        rm -f "${HOME}/Library/LaunchAgents/com.anyshell.maintenance.plist"
         print_success "Removed maintenance launchd service"
     fi
 else
     # Linux
-    if [[ -f "${HOME}/.config/systemd/user/claude-web.service" ]]; then
-        systemctl --user stop claude-web.service 2>/dev/null || true
-        systemctl --user disable claude-web.service 2>/dev/null || true
-        rm -f "${HOME}/.config/systemd/user/claude-web.service"
+    if [[ -f "${HOME}/.config/systemd/user/anyshell-web.service" ]]; then
+        systemctl --user stop anyshell-web.service 2>/dev/null || true
+        systemctl --user disable anyshell-web.service 2>/dev/null || true
+        rm -f "${HOME}/.config/systemd/user/anyshell-web.service"
         print_success "Removed web systemd service"
     fi
-    if [[ -f "${HOME}/.config/systemd/user/claude-maintenance.timer" ]]; then
-        systemctl --user stop claude-maintenance.timer 2>/dev/null || true
-        systemctl --user disable claude-maintenance.timer 2>/dev/null || true
-        rm -f "${HOME}/.config/systemd/user/claude-maintenance.timer"
-        rm -f "${HOME}/.config/systemd/user/claude-maintenance.service"
+    if [[ -f "${HOME}/.config/systemd/user/anyshell-maintenance.timer" ]]; then
+        systemctl --user stop anyshell-maintenance.timer 2>/dev/null || true
+        systemctl --user disable anyshell-maintenance.timer 2>/dev/null || true
+        rm -f "${HOME}/.config/systemd/user/anyshell-maintenance.timer"
+        rm -f "${HOME}/.config/systemd/user/anyshell-maintenance.service"
         print_success "Removed maintenance systemd timer"
     fi
     systemctl --user daemon-reload
@@ -83,7 +83,7 @@ fi
 # Remove scripts
 print_step "Removing scripts"
 
-SCRIPTS=("claude-session" "web-terminal" "ttyd-wrapper" "claude-status" "claude-maintenance")
+SCRIPTS=("anyshell" "web-terminal" "ttyd-wrapper" "anyshell-status" "anyshell-maintenance")
 for script in "${SCRIPTS[@]}"; do
     if [[ -f "${LOCAL_BIN}/${script}" ]]; then
         rm -f "${LOCAL_BIN}/${script}"

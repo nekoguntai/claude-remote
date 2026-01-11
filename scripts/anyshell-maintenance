@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# maintenance - Cleanup and maintenance tasks for Claude Remote
+# maintenance - Cleanup and maintenance tasks for Anyshell
 #
 # Run periodically (e.g., weekly via cron) to keep the server healthy
 # for perpetual operation.
@@ -33,7 +33,7 @@ CYAN='\033[0;36m'
 BOLD='\033[1m'
 NC='\033[0m'
 
-LOCAL_SHARE="${HOME}/.local/share/claude-remote"
+LOCAL_SHARE="${HOME}/.local/share/anyshell"
 DRY_RUN=false
 RUN_LOGS=true
 RUN_MOSH=true
@@ -80,7 +80,7 @@ done
 
 print_header() {
     echo -e "\n${BOLD}${CYAN}═══════════════════════════════════════════════════════════${NC}"
-    echo -e "${BOLD}${CYAN}                Claude Remote Maintenance                    ${NC}"
+    echo -e "${BOLD}${CYAN}                Anyshell Maintenance                    ${NC}"
     echo -e "${BOLD}${CYAN}═══════════════════════════════════════════════════════════${NC}"
     if $DRY_RUN; then
         echo -e "${YELLOW}                      (DRY RUN MODE)${NC}"
@@ -251,7 +251,7 @@ show_sessions() {
         echo -e "  ${BOLD}$name${NC}: $windows window(s), $status"
     done < <(tmux list-sessions -F "#{session_name}" 2>/dev/null)
 
-    echo -e "\n  ${BLUE}Tip: Use 'claude-session --kill <name>' to remove unused sessions${NC}"
+    echo -e "\n  ${BLUE}Tip: Use 'anyshell --kill <name>' to remove unused sessions${NC}"
 }
 
 # ============================================================================

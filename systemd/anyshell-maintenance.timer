@@ -1,6 +1,6 @@
 [Unit]
-Description=Weekly Claude Remote Maintenance
-Documentation=https://github.com/nekoguntai/claude-remote
+Description=Weekly Anyshell Maintenance
+Documentation=https://github.com/nekoguntai/anyshell
 
 [Timer]
 # Run weekly on Sunday at 3:00 AM

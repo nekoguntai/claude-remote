@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# status - Show status of Claude Remote services
+# status - Show status of Anyshell services
 #
 
 set -e
@@ -39,7 +39,7 @@ if [[ "$OSTYPE" == "darwin"* ]] && ! command -v tailscale &>/dev/null; then
 fi
 
 echo -e "${BOLD}${BLUE}═══════════════════════════════════════════════════════════${NC}"
-echo -e "${BOLD}${BLUE}                    Claude Remote Status                     ${NC}"
+echo -e "${BOLD}${BLUE}                    Anyshell Status                     ${NC}"
 echo -e "${BOLD}${BLUE}═══════════════════════════════════════════════════════════${NC}"
 echo ""
 
@@ -77,14 +77,14 @@ if command -v ttyd &> /dev/null || [[ -x "${HOME}/.local/bin/ttyd" ]]; then
     # Check if service is running
     if [[ "$OSTYPE" == "darwin"* ]]; then
         # macOS
-        if launchctl list 2>/dev/null | grep -q "com.claude.web"; then
+        if launchctl list 2>/dev/null | grep -q "com.anyshell.web"; then
             echo -e "  Service: ${GREEN}Running${NC}"
         else
             echo -e "  Service: ${YELLOW}Not running${NC}"
         fi
     else
         # Linux
-        if systemctl --user is-active claude-web.service &>/dev/null; then
+        if systemctl --user is-active anyshell-web.service &>/dev/null; then
             echo -e "  Service: ${GREEN}Running${NC}"
         else
             echo -e "  Service: ${YELLOW}Not running${NC}"
@@ -92,7 +92,7 @@ if command -v ttyd &> /dev/null || [[ -x "${HOME}/.local/bin/ttyd" ]]; then
     fi
 
     # Check credentials
-    CRED_FILE="${HOME}/.config/claude-remote/web-credentials"
+    CRED_FILE="${HOME}/.config/anyshell/web-credentials"
     if [[ -f "$CRED_FILE" ]]; then
         echo -e "  Auth: ${GREEN}Configured${NC} (user: claude)"
     else
@@ -167,10 +167,10 @@ HOSTNAME=$(hostname)
 USER=$(whoami)
 
 echo -e "  ${BOLD}Mosh (recommended):${NC}"
-echo -e "    mosh ${USER}@${HOSTNAME} -- claude-session"
+echo -e "    mosh ${USER}@${HOSTNAME} -- anyshell"
 echo ""
 echo -e "  ${BOLD}SSH:${NC}"
-echo -e "    ssh ${USER}@${HOSTNAME} -t 'claude-session'"
+echo -e "    ssh ${USER}@${HOSTNAME} -t 'anyshell'"
 echo ""
 
 if command -v tailscale &>/dev/null || [[ -x "$TAILSCALE_CMD" ]]; then
@@ -184,7 +184,7 @@ if command -v tailscale &>/dev/null || [[ -x "$TAILSCALE_CMD" ]]; then
         echo -e "  ${BOLD}Web Browser (requires Tailscale on client):${NC}"
         echo -e "    https://${TS_HOSTNAME}:7681"
         echo -e "    Username: claude"
-        echo -e "    Password: cat ~/.config/claude-remote/web-credentials"
+        echo -e "    Password: cat ~/.config/anyshell/web-credentials"
         echo ""
     fi
   fi

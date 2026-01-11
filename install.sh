@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# Claude Remote - Installation Script
+# Anyshell - Installation Script
 # Installs mosh + tmux with web terminal fallback
 #
 # Usage:
@@ -38,7 +38,7 @@ while [[ $# -gt 0 ]]; do
             shift
             ;;
         --version|-V)
-            echo "claude-remote version $VERSION"
+            echo "anyshell version $VERSION"
             exit 0
             ;;
         --help|-h)
@@ -52,7 +52,7 @@ while [[ $# -gt 0 ]]; do
             echo "  --help, -h       Show this help message"
             echo ""
             echo "Environment variables:"
-            echo "  CLAUDE_REMOTE_TEST_MODE=1  Enable test mode (skip actual package installs)"
+            echo "  ANYSHELL_TEST_MODE=1  Enable test mode (skip actual package installs)"
             exit 0
             ;;
         *)
@@ -75,8 +75,8 @@ NC='\033[0m'
 # Directories
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 LOCAL_BIN="${HOME}/.local/bin"
-LOCAL_SHARE="${HOME}/.local/share/claude-remote"
-CONFIG_DIR="${HOME}/.config/claude-remote"
+LOCAL_SHARE="${HOME}/.local/share/anyshell"
+CONFIG_DIR="${HOME}/.config/anyshell"
 VERSION_FILE="${CONFIG_DIR}/version"
 
 # Get currently installed version (returns "none" if not installed)
@@ -148,9 +148,9 @@ print_banner() {
     echo "╔═══════════════════════════════════════════════════════════╗"
     echo "║                                                           ║"
     if $UPGRADE_MODE; then
-        echo "║               Claude Remote Upgrader                      ║"
+        echo "║               Anyshell Upgrader                      ║"
     else
-        echo "║               Claude Remote Installer                     ║"
+        echo "║               Anyshell Installer                     ║"
     fi
     echo "║                                                           ║"
     echo "║   Persistent terminal sessions for mobile productivity    ║"
@@ -501,7 +501,7 @@ generate_credentials() {
         print_dry_run "chmod 700 '$CONFIG_DIR'"
         print_dry_run "Generate random password with: openssl rand -hex 16"
         print_dry_run "Save to: ${CONFIG_DIR}/web-credentials"
-        CLAUDE_WEB_PASSWORD="<generated-password>"
+        ANYSHELL_WEB_PASSWORD="<generated-password>"
         return
     fi
 
@@ -523,7 +523,7 @@ generate_credentials() {
     fi
 
     # Store for later display (local variable, not exported to child processes)
-    CLAUDE_WEB_PASSWORD="$WEB_PASSWORD"
+    ANYSHELL_WEB_PASSWORD="$WEB_PASSWORD"
 }
 
 install_scripts() {
@@ -534,11 +534,11 @@ install_scripts() {
         print_dry_run "mkdir -p '$LOCAL_SHARE' (chmod 700)"
         print_dry_run "Create log files in '$LOCAL_SHARE'"
         print_dry_run "Copy scripts to '$LOCAL_BIN':"
-        print_dry_run "  - claude-session"
+        print_dry_run "  - anyshell"
         print_dry_run "  - web-terminal"
         print_dry_run "  - ttyd-wrapper"
-        print_dry_run "  - claude-status"
-        print_dry_run "  - claude-maintenance"
+        print_dry_run "  - anyshell-status"
+        print_dry_run "  - anyshell-maintenance"
         return
     fi
 
@@ -558,18 +558,18 @@ install_scripts() {
     chmod 700 "$CONFIG_DIR"
 
     # Copy scripts
-    cp "${SCRIPT_DIR}/scripts/claude-session" "${LOCAL_BIN}/"
+    cp "${SCRIPT_DIR}/scripts/anyshell" "${LOCAL_BIN}/"
     cp "${SCRIPT_DIR}/scripts/web-terminal" "${LOCAL_BIN}/"
     cp "${SCRIPT_DIR}/scripts/ttyd-wrapper" "${LOCAL_BIN}/"
-    cp "${SCRIPT_DIR}/scripts/status" "${LOCAL_BIN}/claude-status"
-    cp "${SCRIPT_DIR}/scripts/maintenance" "${LOCAL_BIN}/claude-maintenance"
+    cp "${SCRIPT_DIR}/scripts/anyshell-status" "${LOCAL_BIN}/"
+    cp "${SCRIPT_DIR}/scripts/anyshell-maintenance" "${LOCAL_BIN}/"
 
     # Make executable
-    chmod +x "${LOCAL_BIN}/claude-session"
+    chmod +x "${LOCAL_BIN}/anyshell"
     chmod +x "${LOCAL_BIN}/web-terminal"
     chmod +x "${LOCAL_BIN}/ttyd-wrapper"
-    chmod +x "${LOCAL_BIN}/claude-status"
-    chmod +x "${LOCAL_BIN}/claude-maintenance"
+    chmod +x "${LOCAL_BIN}/anyshell-status"
+    chmod +x "${LOCAL_BIN}/anyshell-maintenance"
 
     print_success "Scripts installed to ${LOCAL_BIN}"
 
@@ -602,7 +602,7 @@ install_scripts() {
                     print_info "PATH already configured in $shell_profile"
                 else
                     echo "" >> "$shell_profile"
-                    echo "# Added by claude-remote installer" >> "$shell_profile"
+                    echo "# Added by anyshell installer" >> "$shell_profile"
                     echo "$path_line" >> "$shell_profile"
                     print_success "Added PATH to $shell_profile"
                     print_info "Run 'source $shell_profile' or restart your terminal"
@@ -645,14 +645,14 @@ install_service_linux() {
 
     if $DRY_RUN; then
         print_dry_run "mkdir -p '${HOME}/.config/systemd/user'"
-        print_dry_run "Install claude-web.service (with %h -> ${HOME})"
-        print_dry_run "Install claude-maintenance.service"
-        print_dry_run "Install claude-maintenance.timer"
+        print_dry_run "Install anyshell-web.service (with %h -> ${HOME})"
+        print_dry_run "Install anyshell-maintenance.service"
+        print_dry_run "Install anyshell-maintenance.timer"
         print_dry_run "systemctl --user daemon-reload"
-        print_dry_run "systemctl --user enable claude-web.service"
-        print_dry_run "systemctl --user start claude-web.service"
-        print_dry_run "systemctl --user enable claude-maintenance.timer"
-        print_dry_run "systemctl --user start claude-maintenance.timer"
+        print_dry_run "systemctl --user enable anyshell-web.service"
+        print_dry_run "systemctl --user start anyshell-web.service"
+        print_dry_run "systemctl --user enable anyshell-maintenance.timer"
+        print_dry_run "systemctl --user start anyshell-maintenance.timer"
         return
     fi
 
@@ -660,11 +660,11 @@ install_service_linux() {
     mkdir -p "${HOME}/.config/systemd/user"
 
     # Copy web service file, substituting home directory
-    sed "s|%h|${HOME}|g" "${SCRIPT_DIR}/systemd/claude-web.service" > "${HOME}/.config/systemd/user/claude-web.service"
+    sed "s|%h|${HOME}|g" "${SCRIPT_DIR}/systemd/anyshell-web.service" > "${HOME}/.config/systemd/user/anyshell-web.service"
 
     # Copy maintenance service and timer
-    sed "s|%h|${HOME}|g" "${SCRIPT_DIR}/systemd/claude-maintenance.service" > "${HOME}/.config/systemd/user/claude-maintenance.service"
-    cp "${SCRIPT_DIR}/systemd/claude-maintenance.timer" "${HOME}/.config/systemd/user/claude-maintenance.timer"
+    sed "s|%h|${HOME}|g" "${SCRIPT_DIR}/systemd/anyshell-maintenance.service" > "${HOME}/.config/systemd/user/anyshell-maintenance.service"
+    cp "${SCRIPT_DIR}/systemd/anyshell-maintenance.timer" "${HOME}/.config/systemd/user/anyshell-maintenance.timer"
 
     # Check if systemctl is available (not in containers)
     if command -v systemctl &>/dev/null; then
@@ -672,15 +672,15 @@ install_service_linux() {
         systemctl --user daemon-reload
 
         # Enable and start web service
-        systemctl --user enable claude-web.service
-        systemctl --user start claude-web.service
+        systemctl --user enable anyshell-web.service
+        systemctl --user start anyshell-web.service
 
         # Enable maintenance timer (runs weekly)
-        systemctl --user enable claude-maintenance.timer
-        systemctl --user start claude-maintenance.timer
+        systemctl --user enable anyshell-maintenance.timer
+        systemctl --user start anyshell-maintenance.timer
 
         print_success "Systemd services installed and started"
-        print_info "Web service: systemctl --user {start|stop|restart|status} claude-web.service"
+        print_info "Web service: systemctl --user {start|stop|restart|status} anyshell-web.service"
         print_info "Maintenance: runs weekly (systemctl --user list-timers)"
     else
         print_warning "systemctl not available (running in container?)"
@@ -694,13 +694,13 @@ install_service_macos() {
 
     if $DRY_RUN; then
         print_dry_run "mkdir -p '${HOME}/Library/LaunchAgents'"
-        print_dry_run "Install com.claude.web.plist (with HOMEDIR -> ${HOME})"
-        print_dry_run "Install com.claude.maintenance.plist"
+        print_dry_run "Install com.anyshell.web.plist (with HOMEDIR -> ${HOME})"
+        print_dry_run "Install com.anyshell.maintenance.plist"
         if [[ -f "/opt/homebrew/bin/ttyd" ]]; then
             print_dry_run "Update ttyd path for Apple Silicon: /opt/homebrew/bin/ttyd"
         fi
-        print_dry_run "launchctl load '${HOME}/Library/LaunchAgents/com.claude.web.plist'"
-        print_dry_run "launchctl load '${HOME}/Library/LaunchAgents/com.claude.maintenance.plist'"
+        print_dry_run "launchctl load '${HOME}/Library/LaunchAgents/com.anyshell.web.plist'"
+        print_dry_run "launchctl load '${HOME}/Library/LaunchAgents/com.anyshell.maintenance.plist'"
         return
     fi
 
@@ -708,22 +708,22 @@ install_service_macos() {
     mkdir -p "${HOME}/Library/LaunchAgents"
 
     # Copy and customize web service plist (replace HOMEDIR placeholder)
-    sed "s|HOMEDIR|${HOME}|g" "${SCRIPT_DIR}/launchd/com.claude.web.plist" > "${HOME}/Library/LaunchAgents/com.claude.web.plist"
+    sed "s|HOMEDIR|${HOME}|g" "${SCRIPT_DIR}/launchd/com.anyshell.web.plist" > "${HOME}/Library/LaunchAgents/com.anyshell.web.plist"
 
     # Copy and customize maintenance plist
-    sed "s|HOMEDIR|${HOME}|g" "${SCRIPT_DIR}/launchd/com.claude.maintenance.plist" > "${HOME}/Library/LaunchAgents/com.claude.maintenance.plist"
+    sed "s|HOMEDIR|${HOME}|g" "${SCRIPT_DIR}/launchd/com.anyshell.maintenance.plist" > "${HOME}/Library/LaunchAgents/com.anyshell.maintenance.plist"
 
     # Update ttyd path if installed via brew (Apple Silicon)
     if [[ -f "/opt/homebrew/bin/ttyd" ]]; then
-        sed -i '' "s|/usr/local/bin/ttyd|/opt/homebrew/bin/ttyd|g" "${HOME}/Library/LaunchAgents/com.claude.web.plist"
+        sed -i '' "s|/usr/local/bin/ttyd|/opt/homebrew/bin/ttyd|g" "${HOME}/Library/LaunchAgents/com.anyshell.web.plist"
     fi
 
     # Load the services
-    launchctl load "${HOME}/Library/LaunchAgents/com.claude.web.plist"
-    launchctl load "${HOME}/Library/LaunchAgents/com.claude.maintenance.plist"
+    launchctl load "${HOME}/Library/LaunchAgents/com.anyshell.web.plist"
+    launchctl load "${HOME}/Library/LaunchAgents/com.anyshell.maintenance.plist"
 
     print_success "Launchd services installed and started"
-    print_info "Web service: launchctl {load|unload} ~/Library/LaunchAgents/com.claude.web.plist"
+    print_info "Web service: launchctl {load|unload} ~/Library/LaunchAgents/com.anyshell.web.plist"
     print_info "Maintenance: runs weekly (Sundays 3:00 AM)"
 }
 
@@ -862,14 +862,34 @@ setup_tailscale() {
     fi
 
     if $DRY_RUN; then
-        print_dry_run "$TAILSCALE_CMD serve https:7681 / http://127.0.0.1:7681"
+        print_dry_run "$TAILSCALE_CMD serve --bg --https 7681 http://127.0.0.1:7681"
         return
     fi
 
     print_info "Configuring Tailscale Serve for web terminal..."
 
     # Enable HTTPS serve for Tailnet-only access (no Funnel = not public)
-    if $TAILSCALE_CMD serve https:7681 / http://127.0.0.1:7681 2>/dev/null; then
+    # Use new CLI syntax (old syntax deprecated)
+    local SERVE_OUTPUT
+    SERVE_OUTPUT=$($TAILSCALE_CMD serve --bg --https 7681 http://127.0.0.1:7681 2>&1)
+    local SERVE_EXIT=$?
+
+    # Check if Serve needs to be enabled on the tailnet
+    if echo "$SERVE_OUTPUT" | grep -q "Serve is not enabled on your tailnet"; then
+        local ENABLE_URL
+        ENABLE_URL=$(echo "$SERVE_OUTPUT" | grep -o 'https://login.tailscale.com/[^ ]*' | head -1)
+
+        print_warning "Tailscale Serve is not enabled on your tailnet"
+        echo ""
+        print_info "To enable Tailscale Serve, visit:"
+        echo ""
+        echo "    ${ENABLE_URL:-https://login.tailscale.com/admin/machines}"
+        echo ""
+        print_info "After enabling, run: tailscale serve --bg --https 7681 http://127.0.0.1:7681"
+        return
+    fi
+
+    if [[ $SERVE_EXIT -eq 0 ]] || echo "$SERVE_OUTPUT" | grep -q "Available within your tailnet"; then
         print_success "Tailscale Serve enabled (Tailnet-only)"
 
         # Get the serve URL
@@ -879,7 +899,7 @@ setup_tailscale() {
         fi
     else
         print_warning "Could not configure Tailscale Serve automatically"
-        print_info "Run manually: tailscale serve https:7681 / http://127.0.0.1:7681"
+        print_info "Run manually: tailscale serve --bg --https 7681 http://127.0.0.1:7681"
     fi
 }
 
@@ -1006,7 +1026,7 @@ configure_boot_persistence() {
         fi
 
         # Verify services are set to load at login
-        if [[ -f "${HOME}/Library/LaunchAgents/com.claude.web.plist" ]]; then
+        if [[ -f "${HOME}/Library/LaunchAgents/com.anyshell.web.plist" ]]; then
             print_success "Web terminal service installed as LaunchAgent"
         fi
 
@@ -1038,7 +1058,7 @@ configure_boot_persistence() {
         print_info "            This logs you in at boot, starting all LaunchAgents"
         echo ""
         print_info "  Option 2: Move services to LaunchDaemons (advanced, requires admin):"
-        print_info "            sudo mv ~/Library/LaunchAgents/com.claude.*.plist /Library/LaunchDaemons/"
+        print_info "            sudo mv ~/Library/LaunchAgents/com.anyshell.*.plist /Library/LaunchDaemons/"
         print_info "            Then update the plist to run as your user"
         echo ""
         print_info "  Option 3: SSH in after reboot to trigger login and start services"
@@ -1097,7 +1117,7 @@ print_completion() {
     if ! $SKIP_TTYD; then
         echo -e "${BOLD}${RED}IMPORTANT - Web Terminal Credentials:${NC}"
         echo -e "  Username: ${YELLOW}claude${NC}"
-        echo -e "  Password: ${YELLOW}${CLAUDE_WEB_PASSWORD}${NC}"
+        echo -e "  Password: ${YELLOW}${ANYSHELL_WEB_PASSWORD}${NC}"
         echo ""
         echo -e "  ${RED}Save this password securely - you'll need it for web access!${NC}"
         echo -e "  Credentials stored in: ${CONFIG_DIR}/web-credentials"
@@ -1107,13 +1127,13 @@ print_completion() {
     echo -e "${BOLD}Quick Start:${NC}"
     echo ""
     echo -e "  ${CYAN}1. Start a persistent session:${NC}"
-    echo -e "     ${YELLOW}claude-session${NC}"
+    echo -e "     ${YELLOW}anyshell${NC}"
     echo ""
     echo -e "  ${CYAN}2. Connect remotely with mosh (recommended):${NC}"
-    echo -e "     ${YELLOW}mosh $(whoami)@$(hostname) -- claude-session${NC}"
+    echo -e "     ${YELLOW}mosh $(whoami)@$(hostname) -- anyshell${NC}"
     echo ""
     echo -e "  ${CYAN}3. Connect via SSH:${NC}"
-    echo -e "     ${YELLOW}ssh $(whoami)@$(hostname) -t 'claude-session'${NC}"
+    echo -e "     ${YELLOW}ssh $(whoami)@$(hostname) -t 'anyshell'${NC}"
     echo ""
 
     if ! $SKIP_TTYD && check_tailscale && $TAILSCALE_CMD status &>/dev/null; then
@@ -1127,7 +1147,7 @@ print_completion() {
     fi
 
     echo -e "  ${CYAN}Check status:${NC}"
-    echo -e "     ${YELLOW}claude-status${NC}"
+    echo -e "     ${YELLOW}anyshell-status${NC}"
     echo ""
 
     if ! $SKIP_TTYD; then
@@ -1159,11 +1179,11 @@ print_completion() {
     echo -e "${BOLD}Usage Tips:${NC}"
     echo "  • Start a long-running process and disconnect - it keeps running!"
     echo "  • Reconnect anytime to pick up where you left off"
-    echo "  • Use 'claude-session <name>' to create named sessions"
+    echo "  • Use 'anyshell <name>' to create named sessions"
     echo "  • tmux prefix is Ctrl+a (e.g., Ctrl+a d to detach)"
     echo "  • Session auto-locks after 15 minutes idle"
     echo ""
-    echo -e "${BLUE}For more help: claude-session --help${NC}"
+    echo -e "${BLUE}For more help: anyshell --help${NC}"
     echo ""
 }
 

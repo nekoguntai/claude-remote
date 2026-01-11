@@ -229,16 +229,16 @@ arch_to_ttyd_arch() {
     [[ "$LOCAL_BIN" =~ \.local/bin$ ]]
 }
 
-@test "directories: CONFIG_DIR default is ~/.config/claude-remote" {
-    local CONFIG_DIR="${HOME}/.config/claude-remote"
+@test "directories: CONFIG_DIR default is ~/.config/anyshell" {
+    local CONFIG_DIR="${HOME}/.config/anyshell"
 
-    [[ "$CONFIG_DIR" =~ \.config/claude-remote$ ]]
+    [[ "$CONFIG_DIR" =~ \.config/anyshell$ ]]
 }
 
-@test "directories: LOCAL_SHARE default is ~/.local/share/claude-remote" {
-    local LOCAL_SHARE="${HOME}/.local/share/claude-remote"
+@test "directories: LOCAL_SHARE default is ~/.local/share/anyshell" {
+    local LOCAL_SHARE="${HOME}/.local/share/anyshell"
 
-    [[ "$LOCAL_SHARE" =~ \.local/share/claude-remote$ ]]
+    [[ "$LOCAL_SHARE" =~ \.local/share/anyshell$ ]]
 }
 
 # =============================================================================
@@ -290,7 +290,7 @@ arch_to_ttyd_arch() {
 # =============================================================================
 
 @test "installer: all required scripts exist" {
-    [ -f "${PROJECT_ROOT}/scripts/claude-session" ]
+    [ -f "${PROJECT_ROOT}/scripts/anyshell" ]
     [ -f "${PROJECT_ROOT}/scripts/web-terminal" ]
     [ -f "${PROJECT_ROOT}/scripts/ttyd-wrapper" ]
     [ -f "${PROJECT_ROOT}/scripts/status" ]
@@ -302,28 +302,28 @@ arch_to_ttyd_arch() {
 }
 
 @test "installer: systemd service files exist" {
-    [ -f "${PROJECT_ROOT}/systemd/claude-web.service" ]
-    [ -f "${PROJECT_ROOT}/systemd/claude-maintenance.service" ]
-    [ -f "${PROJECT_ROOT}/systemd/claude-maintenance.timer" ]
+    [ -f "${PROJECT_ROOT}/systemd/anyshell-web.service" ]
+    [ -f "${PROJECT_ROOT}/systemd/anyshell-maintenance.service" ]
+    [ -f "${PROJECT_ROOT}/systemd/anyshell-maintenance.timer" ]
 }
 
 @test "installer: launchd plist files exist" {
-    [ -f "${PROJECT_ROOT}/launchd/com.claude.web.plist" ]
-    [ -f "${PROJECT_ROOT}/launchd/com.claude.maintenance.plist" ]
+    [ -f "${PROJECT_ROOT}/launchd/com.anyshell.web.plist" ]
+    [ -f "${PROJECT_ROOT}/launchd/com.anyshell.maintenance.plist" ]
 }
 
 # =============================================================================
 # Service File Content Validation
 # =============================================================================
 
-@test "systemd: claude-web.service has correct ExecStart pattern" {
-    run grep "ExecStart=" "${PROJECT_ROOT}/systemd/claude-web.service"
+@test "systemd: anyshell-web.service has correct ExecStart pattern" {
+    run grep "ExecStart=" "${PROJECT_ROOT}/systemd/anyshell-web.service"
 
     [ "$status" -eq 0 ]
     [[ "$output" =~ "ttyd-wrapper" ]]
 }
 
-@test "systemd: claude-web.service binds to localhost" {
+@test "systemd: anyshell-web.service binds to localhost" {
     # The service should use ttyd-wrapper which binds to 127.0.0.1
     run cat "${PROJECT_ROOT}/scripts/ttyd-wrapper"
 
@@ -331,13 +331,13 @@ arch_to_ttyd_arch() {
 }
 
 @test "launchd: web plist has correct program path pattern" {
-    run grep "ttyd-wrapper" "${PROJECT_ROOT}/launchd/com.claude.web.plist"
+    run grep "ttyd-wrapper" "${PROJECT_ROOT}/launchd/com.anyshell.web.plist"
 
     [ "$status" -eq 0 ]
 }
 
 @test "launchd: plist uses HOMEDIR placeholder" {
-    run grep "HOMEDIR" "${PROJECT_ROOT}/launchd/com.claude.web.plist"
+    run grep "HOMEDIR" "${PROJECT_ROOT}/launchd/com.anyshell.web.plist"
 
     [ "$status" -eq 0 ]
 }

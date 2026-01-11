@@ -1,4 +1,4 @@
-# Dockerfile for testing claude-remote installation on Fedora/RHEL
+# Dockerfile for testing anyshell installation on Fedora/RHEL
 FROM fedora:39
 
 # Install minimal dependencies for testing
@@ -16,12 +16,12 @@ RUN useradd -m -s /bin/bash testuser && \
     echo "testuser ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
 
 # Copy the project
-COPY . /home/testuser/claude-remote
-RUN chown -R testuser:testuser /home/testuser/claude-remote
+COPY . /home/testuser/anyshell
+RUN chown -R testuser:testuser /home/testuser/anyshell
 
 # Switch to test user
 USER testuser
-WORKDIR /home/testuser/claude-remote
+WORKDIR /home/testuser/anyshell
 
 # Default command runs the installation test
 CMD ["bash", "tests/docker/test-install.sh"]

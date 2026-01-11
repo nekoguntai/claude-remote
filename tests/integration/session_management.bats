@@ -14,7 +14,7 @@ setup() {
     export TEST_TEMP_DIR="$(mktemp -d)"
     export HOME="${TEST_TEMP_DIR}/home"
     mkdir -p "$HOME"
-    mkdir -p "${HOME}/.config/claude-remote"
+    mkdir -p "${HOME}/.config/anyshell"
     mkdir -p "${HOME}/.local/bin"
 
     if ! command -v tmux &>/dev/null; then
@@ -176,30 +176,30 @@ teardown() {
 }
 
 # =============================================================================
-# claude-session Script Integration
+# anyshell Script Integration
 # =============================================================================
 
-@test "integration: claude-session --help works" {
-    run bash "${SCRIPTS_DIR}/claude-session" --help
+@test "integration: anyshell --help works" {
+    run bash "${SCRIPTS_DIR}/anyshell" --help
 
     [ "$status" -eq 0 ]
     [[ "$output" =~ "Usage" ]]
 }
 
-@test "integration: claude-session --list works with no sessions" {
+@test "integration: anyshell --list works with no sessions" {
     # Ensure no tmux server
     tmux -L test_socket kill-server 2>/dev/null || true
 
-    run bash "${SCRIPTS_DIR}/claude-session" --list
+    run bash "${SCRIPTS_DIR}/anyshell" --list
 
     # Should succeed but show no sessions
     [[ "$output" =~ "No active" ]] || [[ "$output" =~ "no server" ]] || [ "$status" -eq 0 ]
 }
 
-@test "integration: claude-session validates session names" {
+@test "integration: anyshell validates session names" {
     run bash -c "
         # Source the validation function
-        source '${SCRIPTS_DIR}/claude-session'
+        source '${SCRIPTS_DIR}/anyshell'
         validate_session_name 'invalid;name'
     " 2>&1
 

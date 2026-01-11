@@ -1,11 +1,11 @@
 [Unit]
-Description=Claude Remote Web Terminal (ttyd)
+Description=Anyshell Web Terminal (ttyd)
 Documentation=https://github.com/tsl0922/ttyd
 After=network.target
 
 [Service]
 Type=simple
-Environment=CLAUDE_SESSION=main
+Environment=ANYSHELL_SESSION=main
 
 # Use wrapper script that handles credential loading
 ExecStart=%h/.local/bin/ttyd-wrapper
@@ -20,7 +20,7 @@ PrivateTmp=true
 PrivateDevices=true
 ProtectSystem=strict
 ProtectHome=read-only
-ReadWritePaths=%h/.local/share/claude-remote %h/.config/claude-remote
+ReadWritePaths=%h/.local/share/anyshell %h/.config/anyshell
 ProtectKernelTunables=true
 ProtectKernelModules=true
 ProtectControlGroups=true
