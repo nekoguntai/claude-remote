@@ -724,30 +724,53 @@ setup_tailscale() {
         echo ""
 
         if $DRY_RUN; then
-            print_dry_run "sudo tailscale up"
+            print_dry_run "tailscale up (with timeout)"
             return
         fi
 
-        echo -e "${BOLD}Would you like to connect to Tailscale now? [Y/n]${NC} "
-        read -r response
-        response=${response:-Y}
-
-        if [[ "$response" =~ ^[Yy]$ ]] || [[ -z "$response" ]]; then
-            print_info "Starting Tailscale authentication..."
-            print_info "A browser window will open for you to log in"
+        if [[ "$OS" == "macos" ]]; then
+            # macOS: The Tailscale app handles authentication via GUI
+            print_info "Please connect using the Tailscale app:"
+            print_info "  1. Click the Tailscale icon in the menu bar"
+            print_info "  2. Click 'Log in' or 'Connect'"
+            print_info "  3. Complete authentication in your browser"
             echo ""
+            echo -e "${BOLD}Press Enter once you've connected via the Tailscale app...${NC}"
+            read -r
 
-            if sudo tailscale up; then
+            # Check if now connected
+            if tailscale status &>/dev/null; then
                 print_success "Tailscale connected"
             else
-                print_warning "Tailscale connection failed"
-                print_info "Run manually later: sudo tailscale up"
+                print_warning "Tailscale still not connected"
+                print_info "Connect via the Tailscale menu bar app when ready"
                 return
             fi
         else
-            print_info "Skipping Tailscale connection"
-            print_info "Connect later with: sudo tailscale up"
-            return
+            # Linux: Use CLI with timeout
+            echo -e "${BOLD}Would you like to connect to Tailscale now? [Y/n]${NC} "
+            read -r response
+            response=${response:-Y}
+
+            if [[ "$response" =~ ^[Yy]$ ]] || [[ -z "$response" ]]; then
+                print_info "Starting Tailscale authentication..."
+                print_info "A URL will be displayed - open it in your browser to authenticate"
+                print_info "(Timeout: 120 seconds)"
+                echo ""
+
+                # Use timeout to prevent indefinite hang
+                if sudo tailscale up --timeout=120s 2>&1; then
+                    print_success "Tailscale connected"
+                else
+                    print_warning "Tailscale connection timed out or failed"
+                    print_info "Run manually: sudo tailscale up"
+                    return
+                fi
+            else
+                print_info "Skipping Tailscale connection"
+                print_info "Connect later with: sudo tailscale up"
+                return
+            fi
         fi
     fi
 
