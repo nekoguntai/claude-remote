@@ -3,8 +3,48 @@
 # Claude Remote - Installation Script
 # Installs mosh + tmux with web terminal fallback
 #
+# Usage:
+#   ./install.sh              # Normal installation
+#   ./install.sh --dry-run    # Show what would be done without doing it
+#   ./install.sh --help       # Show help
+#
 
 set -e
+
+# Mode flags
+DRY_RUN=false
+VERBOSE=false
+
+# Parse command line arguments
+while [[ $# -gt 0 ]]; do
+    case $1 in
+        --dry-run|-n)
+            DRY_RUN=true
+            shift
+            ;;
+        --verbose|-v)
+            VERBOSE=true
+            shift
+            ;;
+        --help|-h)
+            echo "Usage: $0 [OPTIONS]"
+            echo ""
+            echo "Options:"
+            echo "  --dry-run, -n    Show what would be done without making changes"
+            echo "  --verbose, -v    Show verbose output"
+            echo "  --help, -h       Show this help message"
+            echo ""
+            echo "Environment variables:"
+            echo "  CLAUDE_REMOTE_TEST_MODE=1  Enable test mode (skip actual package installs)"
+            exit 0
+            ;;
+        *)
+            echo "Unknown option: $1"
+            echo "Run '$0 --help' for usage"
+            exit 1
+            ;;
+    esac
+done
 
 # Colors
 RED='\033[0;31m'
@@ -44,6 +84,19 @@ print_banner() {
 
 print_step() {
     echo -e "\n${BOLD}${CYAN}▶ $1${NC}"
+}
+
+print_dry_run() {
+    echo -e "  ${YELLOW}[DRY-RUN]${NC} $1"
+}
+
+# Execute a command, respecting dry-run mode
+run_cmd() {
+    if $DRY_RUN; then
+        print_dry_run "$*"
+        return 0
+    fi
+    "$@"
 }
 
 print_info() {
@@ -92,13 +145,33 @@ install_packages_macos() {
     fi
 
     print_info "Installing packages via Homebrew..."
-    brew install mosh tmux ttyd
+    if $DRY_RUN; then
+        print_dry_run "brew install mosh tmux ttyd"
+    else
+        # Install packages that aren't already installed
+        local packages_to_install=""
+        for pkg in mosh tmux ttyd; do
+            if ! brew list "$pkg" &>/dev/null; then
+                packages_to_install="$packages_to_install $pkg"
+            else
+                print_info "$pkg already installed"
+            fi
+        done
+        if [[ -n "$packages_to_install" ]]; then
+            brew install $packages_to_install
+        fi
+    fi
 }
 
 install_packages_debian() {
     print_info "Installing packages via apt..."
-    sudo apt update
-    sudo apt install -y mosh tmux
+    if $DRY_RUN; then
+        print_dry_run "sudo apt update"
+        print_dry_run "sudo apt install -y mosh tmux"
+    else
+        sudo apt update
+        sudo apt install -y mosh tmux
+    fi
 
     # ttyd needs to be installed from GitHub releases or built
     install_ttyd_binary
@@ -106,7 +179,11 @@ install_packages_debian() {
 
 install_packages_redhat() {
     print_info "Installing packages via dnf..."
-    sudo dnf install -y mosh tmux
+    if $DRY_RUN; then
+        print_dry_run "sudo dnf install -y mosh tmux"
+    else
+        sudo dnf install -y mosh tmux
+    fi
 
     # ttyd needs to be installed from GitHub releases
     install_ttyd_binary
@@ -124,7 +201,7 @@ install_ttyd_binary() {
     ARCH=$(uname -m)
     case "$ARCH" in
         x86_64)  TTYD_ARCH="x86_64" ;;
-        aarch64) TTYD_ARCH="aarch64" ;;
+        aarch64|arm64) TTYD_ARCH="aarch64" ;;  # arm64 is macOS name for aarch64
         armv7l)
             print_error "armhf (armv7l) architecture is not supported"
             print_error "No verified checksum available for this platform"
@@ -146,13 +223,26 @@ install_ttyd_binary() {
     # Download URL (pinned version for security)
     TTYD_URL="https://github.com/tsl0922/ttyd/releases/download/${TTYD_VERSION}/ttyd.${TTYD_ARCH}"
 
+    if $DRY_RUN; then
+        print_dry_run "curl -fsSL '$TTYD_URL' -o /tmp/ttyd"
+        print_dry_run "Verify SHA256: $EXPECTED_CHECKSUM"
+        print_dry_run "mv /tmp/ttyd '${LOCAL_BIN}/ttyd'"
+        print_dry_run "chmod +x '${LOCAL_BIN}/ttyd'"
+        return
+    fi
+
     # Download to temporary file
-    mkdir -p "$LOCAL_BIN"
+    run_cmd mkdir -p "$LOCAL_BIN"
     TEMP_FILE=$(mktemp)
     curl -fsSL "$TTYD_URL" -o "$TEMP_FILE"
 
-    # Verify checksum
-    ACTUAL_CHECKSUM=$(sha256sum "$TEMP_FILE" | cut -d' ' -f1)
+    # Verify checksum (handle both Linux sha256sum and macOS shasum)
+    if command -v sha256sum &>/dev/null; then
+        ACTUAL_CHECKSUM=$(sha256sum "$TEMP_FILE" | cut -d' ' -f1)
+    else
+        ACTUAL_CHECKSUM=$(shasum -a 256 "$TEMP_FILE" | cut -d' ' -f1)
+    fi
+
     if [[ "$ACTUAL_CHECKSUM" != "$EXPECTED_CHECKSUM" ]]; then
         rm -f "$TEMP_FILE"
         print_error "Checksum verification failed!"
@@ -171,6 +261,15 @@ install_ttyd_binary() {
 
 generate_credentials() {
     print_step "Generating web terminal credentials"
+
+    if $DRY_RUN; then
+        print_dry_run "mkdir -p '$CONFIG_DIR'"
+        print_dry_run "chmod 700 '$CONFIG_DIR'"
+        print_dry_run "Generate random password with: openssl rand -hex 16"
+        print_dry_run "Save to: ${CONFIG_DIR}/web-credentials"
+        CLAUDE_WEB_PASSWORD="<generated-password>"
+        return
+    fi
 
     # Create secure config directory
     mkdir -p "$CONFIG_DIR"
@@ -195,6 +294,19 @@ generate_credentials() {
 
 install_scripts() {
     print_step "Installing scripts"
+
+    if $DRY_RUN; then
+        print_dry_run "mkdir -p '$LOCAL_BIN'"
+        print_dry_run "mkdir -p '$LOCAL_SHARE' (chmod 700)"
+        print_dry_run "Create log files in '$LOCAL_SHARE'"
+        print_dry_run "Copy scripts to '$LOCAL_BIN':"
+        print_dry_run "  - claude-session"
+        print_dry_run "  - web-terminal"
+        print_dry_run "  - ttyd-wrapper"
+        print_dry_run "  - claude-status"
+        print_dry_run "  - claude-maintenance"
+        return
+    fi
 
     mkdir -p "$LOCAL_BIN"
 
@@ -238,6 +350,14 @@ install_scripts() {
 install_tmux_config() {
     print_step "Installing tmux configuration"
 
+    if $DRY_RUN; then
+        if [[ -f "${HOME}/.tmux.conf" ]]; then
+            print_dry_run "Backup existing ~/.tmux.conf"
+        fi
+        print_dry_run "cp '${SCRIPT_DIR}/config/tmux.conf' '${HOME}/.tmux.conf'"
+        return
+    fi
+
     if [[ -f "${HOME}/.tmux.conf" ]]; then
         # Backup existing config
         BACKUP="${HOME}/.tmux.conf.backup.$(date +%Y%m%d%H%M%S)"
@@ -251,6 +371,19 @@ install_tmux_config() {
 
 install_service_linux() {
     print_step "Installing systemd services"
+
+    if $DRY_RUN; then
+        print_dry_run "mkdir -p '${HOME}/.config/systemd/user'"
+        print_dry_run "Install claude-web.service (with %h -> ${HOME})"
+        print_dry_run "Install claude-maintenance.service"
+        print_dry_run "Install claude-maintenance.timer"
+        print_dry_run "systemctl --user daemon-reload"
+        print_dry_run "systemctl --user enable claude-web.service"
+        print_dry_run "systemctl --user start claude-web.service"
+        print_dry_run "systemctl --user enable claude-maintenance.timer"
+        print_dry_run "systemctl --user start claude-maintenance.timer"
+        return
+    fi
 
     # Create user systemd directory
     mkdir -p "${HOME}/.config/systemd/user"
@@ -280,6 +413,18 @@ install_service_linux() {
 
 install_service_macos() {
     print_step "Installing launchd services"
+
+    if $DRY_RUN; then
+        print_dry_run "mkdir -p '${HOME}/Library/LaunchAgents'"
+        print_dry_run "Install com.claude.web.plist (with HOMEDIR -> ${HOME})"
+        print_dry_run "Install com.claude.maintenance.plist"
+        if [[ -f "/opt/homebrew/bin/ttyd" ]]; then
+            print_dry_run "Update ttyd path for Apple Silicon: /opt/homebrew/bin/ttyd"
+        fi
+        print_dry_run "launchctl load '${HOME}/Library/LaunchAgents/com.claude.web.plist'"
+        print_dry_run "launchctl load '${HOME}/Library/LaunchAgents/com.claude.maintenance.plist'"
+        return
+    fi
 
     # Create LaunchAgents directory
     mkdir -p "${HOME}/Library/LaunchAgents"
@@ -311,7 +456,7 @@ setup_tailscale() {
         print_warning "Tailscale not installed"
         print_info "Install Tailscale for secure remote access:"
         if [[ "$OS" == "macos" ]]; then
-            echo "        brew install tailscale"
+            echo "        brew install --cask tailscale"
         else
             echo ""
             echo "        # Download and verify before running:"
@@ -328,6 +473,11 @@ setup_tailscale() {
     if ! tailscale status &>/dev/null; then
         print_warning "Tailscale is not connected"
         print_info "Run: sudo tailscale up"
+        return
+    fi
+
+    if $DRY_RUN; then
+        print_dry_run "tailscale serve https:7681 / http://127.0.0.1:7681"
         return
     fi
 
@@ -412,6 +562,10 @@ print_completion() {
 # Main installation flow
 main() {
     print_banner
+
+    if $DRY_RUN; then
+        echo -e "${BOLD}${YELLOW}DRY RUN MODE - No changes will be made${NC}\n"
+    fi
 
     # Detect OS
     print_step "Detecting operating system"
