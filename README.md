@@ -37,6 +37,106 @@ Persistent terminal sessions for mobile productivity. Run long processes, discon
     └─────────────────────────────────────────┘
 ```
 
+## How Connections Work
+
+### Mosh Connection (Recommended for Native Clients)
+
+```
+┌──────────────────────────────────────────────────────────────────┐
+│                     MOSH CONNECTION FLOW                          │
+├──────────────────────────────────────────────────────────────────┤
+│                                                                   │
+│  Mobile Device                              Server                │
+│  ┌─────────────┐                         ┌─────────────┐         │
+│  │ Blink Shell │                         │  SSH Server │         │
+│  │ / Terminal  │                         │  (port 22)  │         │
+│  └──────┬──────┘                         └──────┬──────┘         │
+│         │                                       │                 │
+│         │ ① SSH Handshake (TCP, encrypted)      │                 │
+│         │──────────────────────────────────────▶│                 │
+│         │   - Authenticate with SSH key         │                 │
+│         │   - Start mosh-server                 │                 │
+│         │   - Receive UDP port + session key    │                 │
+│         │◀──────────────────────────────────────│                 │
+│         │                                       │                 │
+│  ┌──────┴──────┐                         ┌──────┴──────┐         │
+│  │ Mosh Client │                         │ Mosh Server │         │
+│  └──────┬──────┘                         └──────┬──────┘         │
+│         │                                       │                 │
+│         │ ② Mosh Protocol (UDP, encrypted)      │                 │
+│         │◀═════════════════════════════════════▶│                 │
+│         │   AES-128-OCB authenticated encryption│                 │
+│         │   Handles roaming, packet loss        │                 │
+│         │                                ┌──────┴──────┐         │
+│         │                                │    tmux     │         │
+│         │                                │  (session)  │         │
+│         │                                └─────────────┘         │
+│                                                                   │
+│  ENCRYPTION: All traffic encrypted end-to-end                    │
+│  - Phase 1: SSH (AES-256-GCM or similar)                         │
+│  - Phase 2: Mosh (AES-128-OCB)                                   │
+└──────────────────────────────────────────────────────────────────┘
+```
+
+**Experience**: Open Blink Shell (iOS) or terminal, run `mosh user@server -- claude-session`. Works like SSH but survives Wi-Fi changes, sleep/wake, and brief disconnections. Best for extended sessions.
+
+### Web Terminal Connection (Browser Fallback)
+
+```
+┌──────────────────────────────────────────────────────────────────┐
+│                   WEB TERMINAL CONNECTION FLOW                    │
+├──────────────────────────────────────────────────────────────────┤
+│                                                                   │
+│  Mobile Device                              Server                │
+│  ┌─────────────┐                         ┌─────────────┐         │
+│  │  Tailscale  │                         │  Tailscale  │         │
+│  │    App      │                         │   Daemon    │         │
+│  └──────┬──────┘                         └──────┬──────┘         │
+│         │                                       │                 │
+│         │ ① WireGuard Tunnel (always on)        │                 │
+│         │◀═════════════════════════════════════▶│                 │
+│         │   ChaCha20-Poly1305 encryption        │                 │
+│         │   Tailnet-only (not public internet)  │                 │
+│         │                                       │                 │
+│  ┌──────┴──────┐                         ┌──────┴──────┐         │
+│  │   Browser   │                         │  Tailscale  │         │
+│  │  (Safari)   │                         │    Serve    │         │
+│  └──────┬──────┘                         └──────┬──────┘         │
+│         │                                       │                 │
+│         │ ② HTTPS Request                       │                 │
+│         │──────────────────────────────────────▶│ (localhost)    │
+│         │   https://server:7681                 │      │          │
+│         │                                ┌──────┴──────┐         │
+│         │ ③ Password Prompt              │    ttyd     │         │
+│         │   Username: claude             │ (127.0.0.1) │         │
+│         │   Password: ********           └──────┬──────┘         │
+│         │                                       │                 │
+│         │ ④ WebSocket Terminal Stream           │                 │
+│         │◀═════════════════════════════════════▶│                 │
+│         │                                ┌──────┴──────┐         │
+│         │                                │    tmux     │         │
+│         │                                │  (session)  │         │
+│         │                                └─────────────┘         │
+│                                                                   │
+│  ENCRYPTION: WireGuard encrypts all traffic through tunnel       │
+│  - Tailscale: ChaCha20-Poly1305 (WireGuard)                      │
+│  - Localhost segments: Not encrypted (same device, not needed)   │
+│  - Auth: Tailscale account (supports 2FA) + password             │
+└──────────────────────────────────────────────────────────────────┘
+```
+
+**Experience**: Open Safari/Chrome, navigate to `https://your-server:7681`, enter password. Full terminal in browser. Works on any device with Tailscale installed.
+
+### Which Should I Use?
+
+| Scenario | Recommendation |
+|----------|----------------|
+| Extended coding sessions | Mosh - handles disconnections gracefully |
+| Quick check from any device | Web - no app installation needed beyond Tailscale |
+| Unreliable network | Mosh - designed for packet loss and roaming |
+| Device without mosh client | Web - works in any browser |
+| Maximum responsiveness | Mosh - lower latency, local echo |
+
 ## Quick Start
 
 ### Installation
