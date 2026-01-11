@@ -143,6 +143,20 @@ These steps are performed once on your server (Linux or macOS machine that will 
 
 ### Step 1: Install Anyshell
 
+**Option A: Install a specific release (Recommended)**
+
+```bash
+# Download and extract a release
+VERSION="1.0.0"  # Replace with desired version
+curl -fsSL "https://github.com/nekoguntai/anyshell/archive/refs/tags/v${VERSION}.tar.gz" | tar xz
+cd "anyshell-${VERSION}"
+
+# Run the installer
+./install.sh
+```
+
+**Option B: Install from latest source**
+
 ```bash
 # Clone the repository
 git clone https://github.com/nekoguntai/anyshell.git
