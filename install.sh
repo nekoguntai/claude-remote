@@ -64,11 +64,16 @@ CONFIG_DIR="${HOME}/.config/claude-remote"
 # ttyd version and checksums for verification
 # Checksums obtained from official GitHub releases
 TTYD_VERSION="1.7.7"
-declare -A TTYD_CHECKSUMS=(
-    ["x86_64"]="a68fca635dbc2b8d2d7c6a4442f0d59246c909c07051aba02834d84e81396fe9"
-    ["aarch64"]="7e71bae2c0b96e8d66ad4611e075c2c22561fac55ccd7df085d86f5d4bf3cb26"
-    # Note: armhf not included - checksum not verified for this architecture
-)
+
+# Checksum lookup function (bash 3.2 compatible, no associative arrays)
+get_ttyd_checksum() {
+    local arch="$1"
+    case "$arch" in
+        x86_64)  echo "a68fca635dbc2b8d2d7c6a4442f0d59246c909c07051aba02834d84e81396fe9" ;;
+        aarch64) echo "7e71bae2c0b96e8d66ad4611e075c2c22561fac55ccd7df085d86f5d4bf3cb26" ;;
+        *)       echo "" ;;  # Unknown architecture
+    esac
+}
 
 print_banner() {
     echo -e "${BOLD}${BLUE}"
@@ -214,7 +219,7 @@ install_ttyd_binary() {
     esac
 
     # Get expected checksum
-    EXPECTED_CHECKSUM="${TTYD_CHECKSUMS[$TTYD_ARCH]}"
+    EXPECTED_CHECKSUM="$(get_ttyd_checksum "$TTYD_ARCH")"
     if [[ -z "$EXPECTED_CHECKSUM" ]]; then
         print_error "No checksum available for architecture: $TTYD_ARCH"
         exit 1
