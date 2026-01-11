@@ -903,6 +903,246 @@ setup_tailscale() {
     fi
 }
 
+configure_ssh_server() {
+    print_step "Checking SSH server (required for mosh)"
+
+    if [[ "$OS" == "macos" ]]; then
+        # macOS: Check if Remote Login is enabled
+        echo ""
+        print_info "Mosh requires SSH to establish the initial connection"
+        print_info "On macOS, this is called 'Remote Login'"
+        echo ""
+
+        if $DRY_RUN; then
+            print_dry_run "Check Remote Login status"
+            print_dry_run "sudo systemsetup -setremotelogin on (if needed)"
+            return
+        fi
+
+        # Check if sshd is listening on port 22
+        if sudo lsof -i :22 2>/dev/null | grep -q LISTEN; then
+            print_success "SSH server is running (port 22)"
+            return
+        fi
+
+        # SSH not running - prompt to enable
+        print_warning "SSH server is not running"
+        echo ""
+        print_info "Without SSH enabled, you cannot connect remotely via mosh or ssh"
+        echo ""
+        echo -e "${BOLD}Enable Remote Login (SSH server)? [Y/n]${NC} "
+        read -r response
+        response=${response:-Y}
+
+        if [[ "$response" =~ ^[Yy]$ ]] || [[ -z "$response" ]]; then
+            print_info "Enabling Remote Login (requires administrator password)..."
+
+            # Try systemsetup first, but it may fail due to Full Disk Access requirement
+            local setup_output
+            setup_output=$(sudo systemsetup -setremotelogin on 2>&1)
+            local setup_exit=$?
+
+            if [[ $setup_exit -eq 0 ]] && ! echo "$setup_output" | grep -qi "Full Disk Access"; then
+                print_success "Remote Login enabled"
+
+                # Verify it's actually running now
+                sleep 1
+                if sudo lsof -i :22 2>/dev/null | grep -q LISTEN; then
+                    print_success "SSH server is now accepting connections on port 22"
+                else
+                    print_warning "SSH may take a moment to start"
+                    print_info "Verify with: sudo lsof -i :22"
+                fi
+            else
+                # systemsetup failed - likely Full Disk Access issue
+                if echo "$setup_output" | grep -qi "Full Disk Access"; then
+                    print_warning "macOS requires Full Disk Access to enable SSH via command line"
+                    echo ""
+                    print_info "Please enable Remote Login manually:"
+                    print_info "  1. Open System Settings"
+                    print_info "  2. Go to General > Sharing"
+                    print_info "  3. Toggle ON 'Remote Login'"
+                    echo ""
+                    print_info "(Alternative: Grant Terminal 'Full Disk Access' in Privacy & Security)"
+                else
+                    print_warning "Could not enable via systemsetup"
+                    echo ""
+                    print_info "Enable manually via System Settings:"
+                    print_info "  System Settings > General > Sharing > Remote Login"
+                fi
+                echo ""
+                echo -e "${BOLD}Press Enter after enabling Remote Login...${NC}"
+                read -r
+
+                # Verify after manual enable
+                if sudo lsof -i :22 2>/dev/null | grep -q LISTEN; then
+                    print_success "SSH server is now running"
+                else
+                    print_warning "SSH still not detected - verify Remote Login is enabled"
+                fi
+            fi
+        else
+            print_warning "Skipping SSH setup"
+            print_error "WARNING: Mosh will NOT work without SSH enabled!"
+            print_info "Enable later: sudo systemsetup -setremotelogin on"
+            print_info "Or: System Settings > General > Sharing > Remote Login"
+        fi
+        return
+    fi
+
+    # Linux: Check if sshd is running
+    if $DRY_RUN; then
+        print_dry_run "Check if sshd service is running"
+        print_dry_run "Enable sshd if needed"
+        return
+    fi
+
+    if systemctl is-active --quiet sshd 2>/dev/null || systemctl is-active --quiet ssh 2>/dev/null; then
+        print_success "SSH server is running"
+        return
+    fi
+
+    # Check if it's installed but not running
+    if systemctl list-unit-files | grep -qE "^ssh(d)?\.service"; then
+        print_warning "SSH server is installed but not running"
+        echo ""
+        echo -e "${BOLD}Start and enable SSH server? [Y/n]${NC} "
+        read -r response
+        response=${response:-Y}
+
+        if [[ "$response" =~ ^[Yy]$ ]] || [[ -z "$response" ]]; then
+            # Try both service names (ssh for Debian, sshd for RHEL)
+            if sudo systemctl enable --now ssh 2>/dev/null || sudo systemctl enable --now sshd 2>/dev/null; then
+                print_success "SSH server started and enabled"
+            else
+                print_warning "Failed to start SSH server"
+                print_info "Start manually: sudo systemctl enable --now ssh"
+            fi
+        fi
+    else
+        print_warning "SSH server (openssh-server) may not be installed"
+        print_info "Install with: sudo apt install openssh-server"
+    fi
+}
+
+optimize_ssh_for_mosh() {
+    print_step "Optimizing SSH server for mosh connections"
+
+    local SSHD_CONFIG="/etc/ssh/sshd_config"
+    local needs_restart=false
+
+    if $DRY_RUN; then
+        print_dry_run "Check/add UseDNS no to $SSHD_CONFIG"
+        print_dry_run "Check/add GSSAPIAuthentication no to $SSHD_CONFIG"
+        print_dry_run "Reload SSH service if changes made"
+        return
+    fi
+
+    # Check if sshd_config exists
+    if [[ ! -f "$SSHD_CONFIG" ]]; then
+        print_warning "SSH config not found at $SSHD_CONFIG"
+        return
+    fi
+
+    # Check and add UseDNS no (prevents slow DNS reverse lookups)
+    if grep -qE "^UseDNS\s+no" "$SSHD_CONFIG" 2>/dev/null; then
+        print_success "UseDNS no already configured"
+    elif grep -qE "^UseDNS" "$SSHD_CONFIG" 2>/dev/null; then
+        print_info "UseDNS is set but not to 'no' - skipping (manual review recommended)"
+    else
+        print_info "Adding UseDNS no to speed up mosh connections..."
+        if echo -e "\n# Disable DNS reverse lookup for faster mosh/ssh connections\nUseDNS no" | sudo tee -a "$SSHD_CONFIG" > /dev/null; then
+            print_success "Added UseDNS no"
+            needs_restart=true
+        else
+            print_warning "Failed to add UseDNS setting"
+        fi
+    fi
+
+    # Check and add GSSAPIAuthentication no (prevents Kerberos timeout delays)
+    if grep -qE "^GSSAPIAuthentication\s+no" "$SSHD_CONFIG" 2>/dev/null; then
+        print_success "GSSAPIAuthentication no already configured"
+    elif grep -qE "^GSSAPIAuthentication" "$SSHD_CONFIG" 2>/dev/null; then
+        print_info "GSSAPIAuthentication is set but not to 'no' - skipping (may be needed for Kerberos)"
+    else
+        print_info "Adding GSSAPIAuthentication no to speed up mosh connections..."
+        if echo -e "\n# Disable GSSAPI to prevent authentication delays\nGSSAPIAuthentication no" | sudo tee -a "$SSHD_CONFIG" > /dev/null; then
+            print_success "Added GSSAPIAuthentication no"
+            needs_restart=true
+        else
+            print_warning "Failed to add GSSAPIAuthentication setting"
+        fi
+    fi
+
+    # Reload SSH service if changes were made
+    if $needs_restart; then
+        print_info "Reloading SSH service to apply changes..."
+        if [[ "$OS" == "macos" ]]; then
+            # macOS: launchctl stop will cause it to restart automatically
+            if sudo launchctl stop com.openssh.sshd 2>/dev/null; then
+                print_success "SSH service reloaded"
+            else
+                print_warning "Could not reload SSH - changes will apply on next restart"
+            fi
+        else
+            # Linux: reload or restart sshd
+            if sudo systemctl reload sshd 2>/dev/null || sudo systemctl reload ssh 2>/dev/null; then
+                print_success "SSH service reloaded"
+            elif sudo systemctl restart sshd 2>/dev/null || sudo systemctl restart ssh 2>/dev/null; then
+                print_success "SSH service restarted"
+            else
+                print_warning "Could not reload SSH - changes will apply on next restart"
+            fi
+        fi
+    fi
+}
+
+configure_homebrew_path() {
+    # Ensure Homebrew is in PATH for non-interactive shells (required for mosh-server)
+    # This is only needed on macOS with Homebrew
+    if [[ "$OS" != "macos" ]]; then
+        return
+    fi
+
+    # Check if Homebrew is installed
+    local brew_path=""
+    if [[ -x "/opt/homebrew/bin/brew" ]]; then
+        brew_path="/opt/homebrew/bin/brew"  # Apple Silicon
+    elif [[ -x "/usr/local/bin/brew" ]]; then
+        brew_path="/usr/local/bin/brew"  # Intel Mac
+    else
+        return  # No Homebrew installed
+    fi
+
+    print_step "Configuring Homebrew PATH for remote sessions"
+
+    if $DRY_RUN; then
+        print_dry_run "Check if Homebrew PATH is in ~/.zshenv"
+        print_dry_run "Add 'eval \"\$($brew_path shellenv)\"' to ~/.zshenv if needed"
+        return
+    fi
+
+    local zshenv="$HOME/.zshenv"
+    local shellenv_cmd="eval \"\$($brew_path shellenv)\""
+
+    # Check if already configured
+    if [[ -f "$zshenv" ]] && grep -qF "brew shellenv" "$zshenv" 2>/dev/null; then
+        print_success "Homebrew PATH already configured in ~/.zshenv"
+        return
+    fi
+
+    # Add Homebrew to PATH in .zshenv (sourced for all zsh sessions including non-interactive)
+    print_info "Adding Homebrew to PATH in ~/.zshenv..."
+    print_info "This ensures mosh-server can be found during remote connections"
+
+    if echo -e "\n# Homebrew PATH (required for mosh-server in non-interactive shells)\n$shellenv_cmd" >> "$zshenv"; then
+        print_success "Homebrew PATH added to ~/.zshenv"
+    else
+        print_warning "Failed to update ~/.zshenv"
+        print_info "Add manually: echo '$shellenv_cmd' >> ~/.zshenv"
+    fi
+}
+
 configure_firewall() {
     print_step "Configuring firewall for mosh"
 
@@ -1002,6 +1242,51 @@ configure_firewall() {
     fi
 
     print_info "No firewall detected - no configuration needed"
+}
+
+configure_mac_sleep() {
+    print_step "Configuring Mac sleep settings"
+
+    echo ""
+    print_info "For a headless Mac (server/always-on), sleep must be disabled"
+    print_info "Otherwise the Mac becomes unreachable when it sleeps"
+    echo ""
+
+    if $DRY_RUN; then
+        print_dry_run "sudo pmset -a sleep 0 disksleep 0 displaysleep 0"
+        return
+    fi
+
+    # Check current sleep setting
+    local current_sleep
+    current_sleep=$(pmset -g | grep -E "^\s*sleep\s+" | awk '{print $2}')
+
+    if [[ "$current_sleep" == "0" ]]; then
+        print_success "Sleep already disabled"
+        return
+    fi
+
+    print_warning "Current sleep setting: ${current_sleep} minutes"
+    echo ""
+    echo -e "${BOLD}Disable sleep to keep Mac accessible? [Y/n]${NC} "
+    read -r response
+    response=${response:-Y}
+
+    if [[ "$response" =~ ^[Yy]$ ]] || [[ -z "$response" ]]; then
+        print_info "Disabling sleep (requires administrator password)..."
+        if sudo pmset -a sleep 0 disksleep 0 displaysleep 0; then
+            print_success "Sleep disabled"
+            print_info "Mac will stay awake and accessible"
+            print_info "To re-enable later: sudo pmset -a sleep 10"
+        else
+            print_warning "Failed to disable sleep"
+            print_info "Run manually: sudo pmset -a sleep 0 disksleep 0 displaysleep 0"
+        fi
+    else
+        print_warning "Skipping sleep configuration"
+        print_info "WARNING: Mac may sleep and become unreachable"
+        print_info "Disable later: sudo pmset -a sleep 0 disksleep 0 displaysleep 0"
+    fi
 }
 
 configure_boot_persistence() {
@@ -1247,8 +1532,22 @@ main() {
         print_info "Web terminal can be enabled later by installing ttyd"
     fi
 
+    # Configure SSH server (required for mosh)
+    configure_ssh_server
+
+    # Optimize SSH for faster mosh connections
+    optimize_ssh_for_mosh
+
+    # Configure Homebrew PATH for non-interactive shells (macOS only)
+    configure_homebrew_path
+
     # Configure firewall for mosh
     configure_firewall
+
+    # Configure Mac sleep settings (prevent sleep for headless Mac)
+    if [[ "$OS" == "macos" ]]; then
+        configure_mac_sleep
+    fi
 
     # Setup Tailscale (useful for both mosh and web terminal)
     setup_tailscale
