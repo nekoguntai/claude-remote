@@ -137,9 +137,11 @@ Persistent terminal sessions for mobile productivity. Run long processes, discon
 | Device without mosh client | Web - works in any browser |
 | Maximum responsiveness | Mosh - lower latency, local echo |
 
-## Quick Start
+## Server Setup (One-Time)
 
-### Installation
+These steps are performed once on your server (Linux or macOS machine that will host your sessions).
+
+### Step 1: Install Claude Remote
 
 ```bash
 # Clone the repository
@@ -159,37 +161,230 @@ The installer will:
 
 **Important**: Save the web terminal password shown at the end of installation!
 
-### Usage
+### Step 2: Configure Tailscale (Required for Web Access)
 
-**Start a persistent session:**
+If not already installed:
 ```bash
-claude-session
+# Linux
+curl -fsSL https://tailscale.com/install.sh | sh
+sudo tailscale up
+
+# macOS
+brew install tailscale
 ```
 
-**Connect remotely with Mosh (recommended):**
+Enable 2FA on your Tailscale account at https://login.tailscale.com/admin/settings/keys for additional security.
+
+### Step 3: Configure Firewall (For Mosh)
+
+Mosh requires UDP ports to be open:
 ```bash
-mosh user@yourserver -- claude-session
+# Ubuntu/Debian with ufw
+sudo ufw allow 60000:60010/udp comment "mosh"
+
+# RHEL/Fedora with firewalld
+sudo firewall-cmd --permanent --add-port=60000-60010/udp
+sudo firewall-cmd --reload
+
+# macOS - usually no firewall changes needed
 ```
 
-**Connect via SSH:**
+### Step 4: Surviving Server Reboots
+
+By default, tmux sessions are lost when the server reboots. Choose one of these options:
+
+**Option A: Auto-start a default session (Recommended)**
+
+Create a systemd user service to start a tmux session on boot:
 ```bash
-ssh user@yourserver -t 'claude-session'
+mkdir -p ~/.config/systemd/user
+
+cat > ~/.config/systemd/user/claude-session.service << 'EOF'
+[Unit]
+Description=Claude tmux session
+After=default.target
+
+[Service]
+Type=forking
+ExecStart=/usr/bin/tmux new-session -d -s main
+ExecStop=/usr/bin/tmux kill-session -t main
+Restart=on-failure
+
+[Install]
+WantedBy=default.target
+EOF
+
+systemctl --user enable claude-session.service
+systemctl --user start claude-session.service
+
+# Enable lingering so service starts even when not logged in
+sudo loginctl enable-linger $USER
 ```
 
-**Connect via web browser (requires Tailscale on client device):**
-1. Install Tailscale on your device and join your Tailnet
-2. Open `https://your-hostname:7681` (shown during installation)
-3. Login with username `claude` and the password from installation
-4. You'll attach to your tmux session
+**Option B: tmux-resurrect plugin (Manual save/restore)**
+```bash
+# Install TPM (Tmux Plugin Manager)
+git clone https://github.com/tmux-plugins/tpm ~/.tmux/plugins/tpm
 
-**Check status:**
+# Add to ~/.tmux.conf
+echo "set -g @plugin 'tmux-plugins/tmux-resurrect'" >> ~/.tmux.conf
+
+# Reload tmux config
+tmux source ~/.tmux.conf
+
+# Install plugins: press Ctrl+a then I (capital i)
+# Save session: Ctrl+a then Ctrl+s
+# Restore session: Ctrl+a then Ctrl+r
+```
+
+**Option C: tmux-continuum (Automatic save/restore)**
+```bash
+# Add to ~/.tmux.conf (requires tmux-resurrect)
+echo "set -g @plugin 'tmux-plugins/tmux-continuum'" >> ~/.tmux.conf
+echo "set -g @continuum-restore 'on'" >> ~/.tmux.conf
+echo "set -g @continuum-save-interval '15'" >> ~/.tmux.conf
+
+# Reload and install: Ctrl+a then I
+```
+
+### Step 5: Verify Setup
+
 ```bash
 claude-status
 ```
 
-**View your web password:**
+This shows:
+- Active tmux sessions
+- Mosh server status
+- Web terminal (ttyd) status
+- Tailscale connection and URL
+
+---
+
+## Client Setup (One-Time per Device)
+
+Set up each device you want to connect from.
+
+### iOS / iPadOS
+
+| App | Setup |
+|-----|-------|
+| **Blink Shell** ($20) | Best mosh client. Add server in Settings → Hosts. |
+| **Termius** (Free/Paid) | Mosh requires subscription. Add server in Hosts. |
+| **Tailscale** (Free) | Install from App Store, sign in to your Tailnet. |
+
+### Android
+
+| App | Setup |
+|-----|-------|
+| **Termux** (Free) | Run `pkg install mosh openssh` |
+| **JuiceSSH** (Free) | Install mosh plugin from app. |
+| **Tailscale** (Free) | Install from Play Store, sign in. |
+
+### Windows
+
+```powershell
+# Option 1: WSL2 (Recommended)
+wsl --install
+# Then in WSL:
+sudo apt install mosh
+
+# Option 2: Install Tailscale for Windows
+# Download from https://tailscale.com/download/windows
+```
+
+### macOS
+
 ```bash
-cat ~/.config/claude-remote/web-credentials
+brew install mosh
+# Tailscale: brew install tailscale OR download from App Store
+```
+
+### Linux
+
+```bash
+# Debian/Ubuntu
+sudo apt install mosh
+
+# Fedora/RHEL
+sudo dnf install mosh
+
+# Tailscale
+curl -fsSL https://tailscale.com/install.sh | sh
+sudo tailscale up
+```
+
+---
+
+## Daily Usage
+
+Once server and client are set up, this is your daily workflow.
+
+### Connecting via Mosh (Recommended)
+
+Best for extended sessions - survives network changes, sleep/wake, and brief disconnections.
+
+```bash
+# Connect and attach to default session
+mosh user@yourserver -- claude-session
+
+# Connect to a named session
+mosh user@yourserver -- claude-session work
+```
+
+**Disconnecting**: Just close the terminal or put your device to sleep. The session keeps running.
+
+**Reconnecting**: Run the same mosh command - you'll be right where you left off.
+
+### Connecting via SSH
+
+For quick connections when mosh isn't available:
+
+```bash
+ssh user@yourserver -t 'claude-session'
+```
+
+Note: SSH connections don't survive network changes like mosh does.
+
+### Connecting via Web Browser
+
+When you don't have a terminal app (e.g., borrowed computer, tablet):
+
+1. Ensure Tailscale is connected on your device
+2. Open your browser to `https://your-server-hostname:7681`
+3. Login with:
+   - Username: `claude`
+   - Password: (from installation, or run `cat ~/.config/claude-remote/web-credentials` on server)
+
+### Working with Sessions
+
+```bash
+# List all sessions (from server or while connected)
+claude-session --list
+
+# Create/attach to named session
+claude-session projectname
+
+# Kill a session
+claude-session --kill projectname
+```
+
+### Detaching vs Disconnecting
+
+| Action | What Happens | How to Do It |
+|--------|--------------|--------------|
+| **Detach** | Cleanly exit, session keeps running | `Ctrl+a d` |
+| **Disconnect** | Close terminal/browser, session keeps running | Just close it |
+| **Kill session** | Terminate the session entirely | `claude-session --kill name` |
+
+### Check Server Status
+
+```bash
+# From server
+claude-status
+
+# Remotely
+ssh user@yourserver claude-status
 ```
 
 ## Security Model
@@ -230,39 +425,6 @@ Unlike Tailscale Funnel (which exposes services publicly), Tailscale Serve restr
 2. **Use a strong SSH key** for mosh/SSH access
 3. **Use `Ctrl+a C-k`** to clear scrollback after entering sensitive data
 4. **Audit your Tailnet members** regularly
-
-## Client Apps by Platform
-
-| Platform | Recommended App | Notes |
-|----------|-----------------|-------|
-| iOS/iPadOS | [Blink Shell](https://blink.sh) | Best mosh client, $20 one-time |
-| | [Termius](https://termius.com) | Free tier, mosh via subscription |
-| Android | [Termux](https://termux.dev) | Free, run `pkg install mosh` |
-| | [JuiceSSH](https://juicessh.com) | Free + mosh plugin |
-| Windows | WSL2 + Windows Terminal | `apt install mosh` in WSL |
-| macOS | Native Terminal/iTerm2 | `brew install mosh` |
-| Linux | Native Terminal | `apt install mosh` |
-| Any | Web Browser | Via Tailscale Serve (Tailnet-only) |
-
-## Session Management
-
-**Create named sessions:**
-```bash
-claude-session work      # Create/attach to "work" session
-claude-session personal  # Create/attach to "personal" session
-```
-
-**List all sessions:**
-```bash
-claude-session --list
-```
-
-**Kill a session:**
-```bash
-claude-session --kill work
-```
-
-**Session names** must contain only alphanumeric characters, underscores, and hyphens.
 
 ## tmux Cheat Sheet
 
@@ -344,10 +506,7 @@ launchctl load ~/Library/LaunchAgents/com.claude.web.plist
 2. Check your password: `cat ~/.config/claude-remote/web-credentials`
 
 ### tmux session lost after reboot
-tmux sessions don't survive reboots by default. Options:
-1. Install tmux-resurrect plugin for manual save/restore
-2. Install tmux-continuum for automatic persistence
-3. Use systemd to auto-start a session on boot
+See [Step 4: Surviving Server Reboots](#step-4-surviving-server-reboots) in the Server Setup section.
 
 ### "claude-session: command not found"
 Add `~/.local/bin` to your PATH:
@@ -363,21 +522,6 @@ source ~/.bashrc
 ```
 
 This removes scripts, services, and optionally the tmux config. Installed packages (mosh, tmux, ttyd) are left in place.
-
-## Use Case: Claude Code on the Go
-
-1. Start Claude Code in a persistent session:
-   ```bash
-   mosh user@server -- claude-session claude
-   # Now in the session:
-   claude
-   ```
-
-2. Start a long-running task (refactoring, code review, etc.)
-
-3. Close your laptop, switch to your phone, lose connectivity - it doesn't matter
-
-4. Reconnect from any device and pick up exactly where you left off
 
 ## License
 
