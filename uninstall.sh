@@ -71,7 +71,7 @@ fi
 # Remove scripts
 print_step "Removing scripts"
 
-SCRIPTS=("claude-session" "web-terminal" "claude-status")
+SCRIPTS=("claude-session" "web-terminal" "ttyd-wrapper" "claude-status")
 for script in "${SCRIPTS[@]}"; do
     if [[ -f "${LOCAL_BIN}/${script}" ]]; then
         rm -f "${LOCAL_BIN}/${script}"
@@ -112,16 +112,15 @@ if [[ -f "${HOME}/.tmux.conf" ]]; then
     fi
 fi
 
-# Tailscale Funnel
+# Tailscale Serve
 print_step "Tailscale configuration"
 
 if command -v tailscale &> /dev/null; then
-    read -p "Disable Tailscale Funnel for port 7681? [y/N] " -n 1 -r
+    read -p "Disable Tailscale Serve for port 7681? [y/N] " -n 1 -r
     echo
     if [[ $REPLY =~ ^[Yy]$ ]]; then
-        tailscale funnel 7681 off 2>/dev/null || true
         tailscale serve off 2>/dev/null || true
-        print_success "Disabled Tailscale Funnel"
+        print_success "Disabled Tailscale Serve"
     fi
 fi
 

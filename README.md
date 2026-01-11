@@ -142,7 +142,7 @@ Unlike Tailscale Funnel (which exposes services publicly), Tailscale Serve restr
 | Windows | WSL2 + Windows Terminal | `apt install mosh` in WSL |
 | macOS | Native Terminal/iTerm2 | `brew install mosh` |
 | Linux | Native Terminal | `apt install mosh` |
-| Any | Web Browser | Via Tailscale Funnel URL |
+| Any | Web Browser | Via Tailscale Serve (Tailnet-only) |
 
 ## Session Management
 
@@ -237,7 +237,7 @@ launchctl load ~/Library/LaunchAgents/com.claude.web.plist
 1. Check service status: `claude-status`
 2. Verify ttyd is running: `pgrep -a ttyd`
 3. Check credentials exist: `cat ~/.config/claude-remote/web-credentials`
-4. Verify Tailscale Funnel: `tailscale funnel status`
+4. Verify Tailscale Serve: `tailscale serve status`
 
 ### "Authentication failed" on web terminal
 1. Ensure you're using username `claude`

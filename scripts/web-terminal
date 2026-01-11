@@ -10,6 +10,13 @@ set -e
 
 SESSION_NAME="${CLAUDE_SESSION:-main}"
 
+# Validate session name to prevent injection attacks
+if [[ ! "$SESSION_NAME" =~ ^[a-zA-Z0-9_-]{1,64}$ ]]; then
+    echo "ERROR: Invalid session name: '$SESSION_NAME'" >&2
+    echo "Session names must be 1-64 characters, alphanumeric with _ and - allowed." >&2
+    exit 1
+fi
+
 # Ensure tmux session exists
 if ! tmux has-session -t "$SESSION_NAME" 2>/dev/null; then
     # Create session detached first

@@ -22,11 +22,12 @@ LOCAL_SHARE="${HOME}/.local/share/claude-remote"
 CONFIG_DIR="${HOME}/.config/claude-remote"
 
 # ttyd version and checksums for verification
+# Checksums obtained from official GitHub releases
 TTYD_VERSION="1.7.7"
 declare -A TTYD_CHECKSUMS=(
     ["x86_64"]="a68fca635dbc2b8d2d7c6a4442f0d59246c909c07051aba02834d84e81396fe9"
     ["aarch64"]="7e71bae2c0b96e8d66ad4611e075c2c22561fac55ccd7df085d86f5d4bf3cb26"
-    ["armhf"]="e3848dde5d0c4f1e2b7c5f55162333a83c5c5d6c5be8a4d6fd6f7e8b9a0c1d2e"
+    # Note: armhf not included - checksum not verified for this architecture
 )
 
 print_banner() {
@@ -124,7 +125,11 @@ install_ttyd_binary() {
     case "$ARCH" in
         x86_64)  TTYD_ARCH="x86_64" ;;
         aarch64) TTYD_ARCH="aarch64" ;;
-        armv7l)  TTYD_ARCH="armhf" ;;
+        armv7l)
+            print_error "armhf (armv7l) architecture is not supported"
+            print_error "No verified checksum available for this platform"
+            exit 1
+            ;;
         *)
             print_error "Unsupported architecture: $ARCH"
             exit 1
@@ -178,14 +183,14 @@ generate_credentials() {
         WEB_PASSWORD=$(cat "$CRED_FILE")
     else
         # Generate secure random password (32 hex chars = 128 bits)
+        # Use umask to create file with secure permissions atomically (fixes TOCTOU)
         WEB_PASSWORD=$(openssl rand -hex 16)
-        echo "$WEB_PASSWORD" > "$CRED_FILE"
-        chmod 600 "$CRED_FILE"
+        (umask 077 && echo "$WEB_PASSWORD" > "$CRED_FILE")
         print_success "Generated new credentials"
     fi
 
-    # Store for later display
-    export CLAUDE_WEB_PASSWORD="$WEB_PASSWORD"
+    # Store for later display (local variable, not exported to child processes)
+    CLAUDE_WEB_PASSWORD="$WEB_PASSWORD"
 }
 
 install_scripts() {

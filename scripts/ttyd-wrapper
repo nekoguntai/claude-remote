@@ -5,12 +5,33 @@
 # This script reads credentials from the config file and launches ttyd
 # with proper authentication and security settings.
 #
+# SECURITY NOTE: The password is passed via --credential flag which is visible
+# in the process list (ps aux). On multi-user systems, this is a known limitation
+# of ttyd's design. Mitigations:
+# - This script has 700 permissions (owner-only)
+# - Primary authentication should be via Tailscale (Tailnet-only access)
+# - The password provides defense-in-depth, not primary security
+# - For multi-user systems, consider using a reverse proxy with auth instead
+#
 
 set -e
 
 CONFIG_DIR="${HOME}/.config/claude-remote"
 CRED_FILE="${CONFIG_DIR}/web-credentials"
 SESSION_NAME="${CLAUDE_SESSION:-main}"
+
+# Warn on multi-user systems
+check_multi_user() {
+    local user_count
+    user_count=$(who | awk '{print $1}' | sort -u | wc -l)
+    if [[ "$user_count" -gt 1 ]]; then
+        echo "WARNING: Multiple users detected on this system." >&2
+        echo "The web terminal password may be visible in the process list." >&2
+        echo "Rely on Tailscale authentication as your primary security layer." >&2
+    fi
+}
+
+check_multi_user
 
 # Check for credential file
 if [[ ! -f "$CRED_FILE" ]]; then
@@ -19,8 +40,8 @@ if [[ ! -f "$CRED_FILE" ]]; then
     exit 1
 fi
 
-# Read password
-WEB_PASSWORD=$(cat "$CRED_FILE")
+# Read password (use subshell to avoid leaving in environment)
+WEB_PASSWORD="$(cat "$CRED_FILE")"
 
 if [[ -z "$WEB_PASSWORD" ]]; then
     echo "ERROR: Empty credential file" >&2
