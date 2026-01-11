@@ -1,0 +1,132 @@
+#!/usr/bin/env bash
+#
+# status - Show status of Claude Remote services
+#
+
+set -e
+
+# Colors
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
+CYAN='\033[0;36m'
+BOLD='\033[1m'
+NC='\033[0m'
+
+echo -e "${BOLD}${BLUE}═══════════════════════════════════════════════════════════${NC}"
+echo -e "${BOLD}${BLUE}                    Claude Remote Status                     ${NC}"
+echo -e "${BOLD}${BLUE}═══════════════════════════════════════════════════════════${NC}"
+echo ""
+
+# Check tmux sessions
+echo -e "${BOLD}${CYAN}📺 tmux Sessions${NC}"
+echo -e "${CYAN}─────────────────────────────────────────────────────────────${NC}"
+if tmux list-sessions 2>/dev/null; then
+    echo ""
+else
+    echo -e "  ${YELLOW}No active sessions${NC}"
+    echo ""
+fi
+
+# Check mosh server
+echo -e "${BOLD}${CYAN}🔌 Mosh Server${NC}"
+echo -e "${CYAN}─────────────────────────────────────────────────────────────${NC}"
+if command -v mosh-server &> /dev/null; then
+    echo -e "  Status: ${GREEN}Installed${NC}"
+    echo -e "  Version: $(mosh-server --version 2>&1 | head -1)"
+
+    # Check for active mosh connections
+    MOSH_PROCS=$(pgrep -c mosh-server 2>/dev/null || echo "0")
+    echo -e "  Active connections: ${MOSH_PROCS}"
+else
+    echo -e "  Status: ${RED}Not installed${NC}"
+fi
+echo ""
+
+# Check ttyd / web terminal
+echo -e "${BOLD}${CYAN}🌐 Web Terminal (ttyd)${NC}"
+echo -e "${CYAN}─────────────────────────────────────────────────────────────${NC}"
+if command -v ttyd &> /dev/null; then
+    echo -e "  Status: ${GREEN}Installed${NC}"
+
+    # Check if service is running
+    if [[ "$OSTYPE" == "darwin"* ]]; then
+        # macOS
+        if launchctl list 2>/dev/null | grep -q "com.claude.web"; then
+            echo -e "  Service: ${GREEN}Running${NC}"
+        else
+            echo -e "  Service: ${YELLOW}Not running${NC}"
+        fi
+    else
+        # Linux
+        if systemctl --user is-active claude-web.service &>/dev/null; then
+            echo -e "  Service: ${GREEN}Running${NC}"
+        else
+            echo -e "  Service: ${YELLOW}Not running${NC}"
+        fi
+    fi
+else
+    echo -e "  Status: ${RED}Not installed${NC}"
+fi
+echo ""
+
+# Check Tailscale
+echo -e "${BOLD}${CYAN}🔒 Tailscale${NC}"
+echo -e "${CYAN}─────────────────────────────────────────────────────────────${NC}"
+if command -v tailscale &> /dev/null; then
+    echo -e "  Status: ${GREEN}Installed${NC}"
+
+    # Get Tailscale status
+    TS_STATUS=$(tailscale status --json 2>/dev/null)
+    if [ $? -eq 0 ]; then
+        TS_IP=$(echo "$TS_STATUS" | grep -o '"TailscaleIPs":\[[^]]*\]' | grep -oE '[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+' | head -1)
+        TS_NAME=$(echo "$TS_STATUS" | grep -o '"Self":{"[^}]*' | grep -o '"HostName":"[^"]*"' | cut -d'"' -f4)
+
+        if [ -n "$TS_IP" ]; then
+            echo -e "  Connected: ${GREEN}Yes${NC}"
+            echo -e "  IP: ${TS_IP}"
+            echo -e "  Hostname: ${TS_NAME}"
+
+            # Check Funnel status
+            if tailscale funnel status 2>/dev/null | grep -q "7681"; then
+                FUNNEL_URL=$(tailscale funnel status 2>/dev/null | grep -oE 'https://[^ ]+' | head -1)
+                echo -e "  Funnel: ${GREEN}Active${NC}"
+                echo -e "  Web URL: ${BOLD}${FUNNEL_URL}${NC}"
+            else
+                echo -e "  Funnel: ${YELLOW}Not configured${NC}"
+            fi
+        else
+            echo -e "  Connected: ${RED}No${NC}"
+        fi
+    else
+        echo -e "  Connected: ${RED}No${NC}"
+    fi
+else
+    echo -e "  Status: ${YELLOW}Not installed${NC}"
+fi
+echo ""
+
+# Connection instructions
+echo -e "${BOLD}${CYAN}📖 Connection Instructions${NC}"
+echo -e "${CYAN}─────────────────────────────────────────────────────────────${NC}"
+HOSTNAME=$(hostname)
+USER=$(whoami)
+
+echo -e "  ${BOLD}Mosh (recommended):${NC}"
+echo -e "    mosh ${USER}@${HOSTNAME} -- claude-session"
+echo ""
+echo -e "  ${BOLD}SSH:${NC}"
+echo -e "    ssh ${USER}@${HOSTNAME} -t 'claude-session'"
+echo ""
+
+if command -v tailscale &> /dev/null; then
+    FUNNEL_URL=$(tailscale funnel status 2>/dev/null | grep -oE 'https://[^ ]+' | head -1)
+    if [ -n "$FUNNEL_URL" ]; then
+        echo -e "  ${BOLD}Web Browser:${NC}"
+        echo -e "    ${FUNNEL_URL}"
+        echo ""
+    fi
+fi
+
+echo -e "${BOLD}${BLUE}═══════════════════════════════════════════════════════════${NC}"

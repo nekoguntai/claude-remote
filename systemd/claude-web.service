@@ -1,0 +1,27 @@
+[Unit]
+Description=Claude Remote Web Terminal (ttyd)
+Documentation=https://github.com/tsl0922/ttyd
+After=network.target
+
+[Service]
+Type=simple
+Environment=CLAUDE_SESSION=main
+
+# Run ttyd on localhost only (Tailscale Funnel handles external access)
+# --writable: Allow input (not read-only)
+# --port 7681: Default ttyd port
+# --base-path /: URL base path
+ExecStart=%h/.local/bin/ttyd --writable --port 7681 %h/.local/bin/web-terminal
+
+# Restart on failure
+Restart=on-failure
+RestartSec=5
+
+# Security hardening
+NoNewPrivileges=true
+ProtectHome=read-only
+ProtectSystem=strict
+ReadWritePaths=%h
+
+[Install]
+WantedBy=default.target

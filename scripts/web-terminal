@@ -1,0 +1,22 @@
+#!/usr/bin/env bash
+#
+# web-terminal - Wrapper script for ttyd to attach to tmux
+#
+# This script is executed by ttyd for each web connection.
+# It attaches to an existing tmux session or creates a new one.
+#
+
+set -e
+
+SESSION_NAME="${CLAUDE_SESSION:-main}"
+
+# Ensure tmux session exists
+if ! tmux has-session -t "$SESSION_NAME" 2>/dev/null; then
+    # Create session detached first
+    tmux new-session -d -s "$SESSION_NAME"
+fi
+
+# Attach to the session
+# Using -d to detach other clients prevents multiple web tabs from conflicting
+# Remove -d if you want to allow multiple viewers of the same session
+exec tmux attach-session -t "$SESSION_NAME"

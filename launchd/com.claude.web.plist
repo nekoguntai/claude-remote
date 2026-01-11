@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.claude.web</string>
+
+    <key>ProgramArguments</key>
+    <array>
+        <string>/usr/local/bin/ttyd</string>
+        <string>--writable</string>
+        <string>--port</string>
+        <string>7681</string>
+        <string>HOMEDIR/.local/bin/web-terminal</string>
+    </array>
+
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>CLAUDE_SESSION</key>
+        <string>main</string>
+        <key>PATH</key>
+        <string>/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin:HOMEDIR/.local/bin</string>
+        <key>HOME</key>
+        <string>HOMEDIR</string>
+    </dict>
+
+    <key>RunAtLoad</key>
+    <true/>
+
+    <key>KeepAlive</key>
+    <dict>
+        <key>SuccessfulExit</key>
+        <false/>
+    </dict>
+
+    <key>StandardOutPath</key>
+    <string>HOMEDIR/.local/share/claude-remote/ttyd.log</string>
+
+    <key>StandardErrorPath</key>
+    <string>HOMEDIR/.local/share/claude-remote/ttyd.error.log</string>
+
+    <key>WorkingDirectory</key>
+    <string>HOMEDIR</string>
+</dict>
+</plist>
