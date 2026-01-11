@@ -9,6 +9,17 @@
 
 set -e
 
+# Ensure Homebrew is in PATH on macOS (for non-interactive shells)
+if [[ "$OSTYPE" == "darwin"* ]]; then
+    if ! command -v tmux &>/dev/null; then
+        if [[ -f "/opt/homebrew/bin/brew" ]]; then
+            eval "$(/opt/homebrew/bin/brew shellenv)"
+        elif [[ -f "/usr/local/bin/brew" ]]; then
+            eval "$(/usr/local/bin/brew shellenv)"
+        fi
+    fi
+fi
+
 TMUX_CONF="${HOME}/.tmux.conf"
 
 # Colors for output
